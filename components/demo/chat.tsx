@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { db, type LocalMessage, type LocalVoiceNote } from "@/lib/db";
 import { conversationIdFor } from "@/lib/demo/conversations";
 import { transcribe, warmTranscriber } from "@/lib/ai/transcribe";
+import { emit } from "@/lib/demo/transport";
 import { useCall } from "./call-provider";
 import { Composer } from "./composer";
 import { MessageBubble } from "./message-bubble";
@@ -55,14 +56,16 @@ export function Chat({ self, peer, onBack }: Props) {
   }, []);
 
   async function sendText(body: string) {
-    await db.messages.add({
+    const message = {
       id: crypto.randomUUID(),
       conversationId,
       senderId: self,
       body,
       createdAt: Date.now(),
       syncedAt: null,
-    });
+    };
+    await db.messages.add(message);
+    void emit({ kind: "message", from: self, to: peer, message });
   }
 
   async function sendVoice(blob: Blob, durationMs: number) {

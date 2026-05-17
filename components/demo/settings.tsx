@@ -54,8 +54,9 @@ export function Settings({ self, onBack, onSignedOut }: Props) {
             </div>
           </CardHeader>
           <CardContent className="text-sm text-zinc-600 dark:text-zinc-400">
-            Offline-first messaging, voice notes, and calls between dummy numbers.
-            Cross-tab demo — open another tab with a different number to chat or call.
+            Cross-device messaging and audio/video calls between dummy numbers.
+            Open CommApp on another phone or tab with a different number to
+            chat or call. Voice notes are saved locally on the recording device.
           </CardContent>
         </Card>
 
@@ -136,13 +137,15 @@ export function Settings({ self, onBack, onSignedOut }: Props) {
               number works.
             </p>
             <p>
-              Cross-tab transport uses{" "}
-              <span className="font-mono">BroadcastChannel</span> and shared{" "}
-              <span className="font-mono">IndexedDB</span> — no server.
+              Cross-device messaging and WebRTC signaling use Supabase Realtime
+              broadcast. Local persistence in{" "}
+              <span className="font-mono">IndexedDB</span> via Dexie.
             </p>
             <p>
               Voice transcription runs locally via Whisper-tiny. WebRTC calls
-              use host ICE candidates (no STUN required for same-machine peers).
+              use Google's public STUN; calls between phones on the same Wi-Fi
+              network usually connect peer-to-peer, while different networks
+              may need a TURN server (not configured here).
             </p>
           </CardContent>
         </Card>

@@ -52,38 +52,8 @@ export function useCall() {
   return ctx;
 }
 
-type Signal =
-  | {
-      type: "call-offer";
-      from: string;
-      to: string;
-      callId: string;
-      kind: CallKind;
-      sdp: string;
-    }
-  | {
-      type: "call-answer";
-      from: string;
-      to: string;
-      callId: string;
-      sdp: string;
-    }
-  | {
-      type: "ice-candidate";
-      from: string;
-      to: string;
-      callId: string;
-      candidate: RTCIceCandidateInit;
-    }
-  | {
-      type: "call-end";
-      from: string;
-      to: string;
-      callId: string;
-      reason: "declined" | "ended" | "busy";
-    };
+import { emit, listen, type BusEvent } from "@/lib/demo/transport";
 
-const CHANNEL = "commapp-call-signaling";
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
 ];
@@ -101,7 +71,6 @@ export function CallProvider({
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  const channelRef = useRef<BroadcastChannel | null>(null);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const stateRef = useRef<CallState>(state);
 
@@ -119,8 +88,8 @@ export function CallProvider({
     setRemoteStream(null);
   }, []);
 
-  const sendSignal = useCallback((signal: Signal) => {
-    channelRef.current?.postMessage(signal);
+  const sendSignal = useCallback((signal: BusEvent) => {
+    void emit(signal);
   }, []);
 
   const setupPeerConnection = useCallback(
@@ -131,7 +100,7 @@ export function CallProvider({
       pc.onicecandidate = (e) => {
         if (e.candidate && self) {
           sendSignal({
-            type: "ice-candidate",
+            kind: "ice-candidate",
             from: self,
             to: peer,
             callId,
@@ -201,11 +170,11 @@ export function CallProvider({
         await pc.setLocalDescription(offer);
 
         sendSignal({
-          type: "call-offer",
+          kind: "call-offer",
           from: self,
           to: peer,
           callId,
-          kind,
+          mediaKind: kind,
           sdp: offer.sdp ?? "",
         });
       } catch (err) {
@@ -230,7 +199,7 @@ export function CallProvider({
       await pc.setLocalDescription(answer);
 
       sendSignal({
-        type: "call-answer",
+        kind: "call-answer",
         from: self,
         to: current.peer,
         callId: current.callId,
@@ -264,7 +233,7 @@ export function CallProvider({
     const current = stateRef.current;
     if (current.phase !== "incoming" || !self) return;
     sendSignal({
-      type: "call-end",
+      kind: "call-end",
       from: self,
       to: current.peer,
       callId: current.callId,
@@ -277,7 +246,7 @@ export function CallProvider({
     const current = stateRef.current;
     if (current.phase === "idle" || !self) return;
     sendSignal({
-      type: "call-end",
+      kind: "call-end",
       from: self,
       to: current.peer,
       callId: current.callId,
@@ -307,21 +276,18 @@ export function CallProvider({
     setState((s) => (s.phase === "active" ? { ...s, cameraOff: nextOff } : s));
   }, []);
 
-  // Wire up the signaling channel.
+  // Wire up the signaling channel (Supabase Realtime — cross-device).
   useEffect(() => {
     if (!self) return;
-    const ch = new BroadcastChannel(CHANNEL);
-    channelRef.current = ch;
 
-    ch.onmessage = async (event: MessageEvent<Signal>) => {
-      const msg = event.data;
+    return listen(async (msg) => {
       if (msg.to !== self) return;
       const current = stateRef.current;
 
-      if (msg.type === "call-offer") {
+      if (msg.kind === "call-offer") {
         if (current.phase !== "idle") {
           sendSignal({
-            type: "call-end",
+            kind: "call-end",
             from: self,
             to: msg.from,
             callId: msg.callId,
@@ -333,13 +299,13 @@ export function CallProvider({
           phase: "incoming",
           peer: msg.from,
           callId: msg.callId,
-          kind: msg.kind,
+          kind: msg.mediaKind,
           offer: { type: "offer", sdp: msg.sdp },
         });
         return;
       }
 
-      if (msg.type === "call-answer") {
+      if (msg.kind === "call-answer") {
         const pc = pcRef.current;
         if (!pc || current.phase !== "outgoing" || current.callId !== msg.callId) return;
         try {
@@ -362,7 +328,7 @@ export function CallProvider({
         return;
       }
 
-      if (msg.type === "ice-candidate") {
+      if (msg.kind === "ice-candidate") {
         const pc = pcRef.current;
         if (!pc || current.phase === "idle") return;
         if (current.callId !== msg.callId) return;
@@ -378,18 +344,13 @@ export function CallProvider({
         return;
       }
 
-      if (msg.type === "call-end") {
+      if (msg.kind === "call-end") {
         if (current.phase === "idle" || current.callId !== msg.callId) return;
         cleanup();
         setState({ phase: "idle" });
         return;
       }
-    };
-
-    return () => {
-      ch.close();
-      channelRef.current = null;
-    };
+    });
   }, [self, sendSignal, drainPendingIce, cleanup]);
 
   // Stop everything if the user signs out.

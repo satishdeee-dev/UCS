@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { db } from "@/lib/db";
 import { clearIdentity, getIdentity } from "@/lib/demo/identity";
+import { listen } from "@/lib/demo/transport";
 import { CallProvider } from "./call-provider";
 import { CallOverlay } from "./call-overlay";
 import { LoginFlow } from "./login-flow";
@@ -24,6 +26,16 @@ export function DemoApp() {
   }, []);
 
   const self = hydration.state === "ready" ? hydration.self : null;
+
+  // Inbound messages from peers (cross-device, via Supabase Realtime).
+  useEffect(() => {
+    if (!self) return;
+    return listen((event) => {
+      if (event.kind !== "message") return;
+      if (event.to !== self) return;
+      void db.messages.put(event.message);
+    });
+  }, [self]);
 
   if (hydration.state === "loading") {
     return (
