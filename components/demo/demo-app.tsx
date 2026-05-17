@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { clearIdentity, getIdentity } from "@/lib/demo/identity";
+import { CallProvider } from "./call-provider";
+import { CallOverlay } from "./call-overlay";
 import { LoginFlow } from "./login-flow";
 import { ConversationsList } from "./conversations-list";
 import { Chat } from "./chat";
@@ -16,33 +18,32 @@ export function DemoApp() {
     setHydration({ state: "ready", self: getIdentity() });
   }, []);
 
-  if (hydration.state === "loading") {
-    return <div className="min-h-svh" />;
-  }
-
-  if (hydration.self === null) {
-    return (
-      <LoginFlow
-        onSignedIn={(phone) => setHydration({ state: "ready", self: phone })}
-      />
-    );
-  }
-
-  if (peer === null) {
-    return (
-      <ConversationsList
-        self={hydration.self}
-        onSelect={setPeer}
-        onLogout={() => {
-          clearIdentity();
-          setHydration({ state: "ready", self: null });
-          setPeer(null);
-        }}
-      />
-    );
-  }
+  const self = hydration.state === "ready" ? hydration.self : null;
 
   return (
-    <Chat self={hydration.self} peer={peer} onBack={() => setPeer(null)} />
+    <CallProvider self={self}>
+      {hydration.state === "loading" ? (
+        <div className="min-h-svh" />
+      ) : hydration.self === null ? (
+        <LoginFlow
+          onSignedIn={(phone) =>
+            setHydration({ state: "ready", self: phone })
+          }
+        />
+      ) : peer === null ? (
+        <ConversationsList
+          self={hydration.self}
+          onSelect={setPeer}
+          onLogout={() => {
+            clearIdentity();
+            setHydration({ state: "ready", self: null });
+            setPeer(null);
+          }}
+        />
+      ) : (
+        <Chat self={hydration.self} peer={peer} onBack={() => setPeer(null)} />
+      )}
+      <CallOverlay />
+    </CallProvider>
   );
 }

@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { db, type LocalMessage, type LocalVoiceNote } from "@/lib/db";
 import { conversationIdFor } from "@/lib/demo/conversations";
 import { transcribe, warmTranscriber } from "@/lib/ai/transcribe";
+import { useCall } from "./call-provider";
 import { Composer } from "./composer";
 import { MessageBubble } from "./message-bubble";
 
@@ -87,6 +88,9 @@ export function Chat({ self, peer, onBack }: Props) {
     }
   }
 
+  const { call, state: callState } = useCall();
+  const callInFlight = callState.phase !== "idle";
+
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-2xl flex-1 flex-col">
       <header className="flex items-center gap-2 border-b px-3 py-3">
@@ -96,10 +100,19 @@ export function Chat({ self, peer, onBack }: Props) {
         <div className="flex size-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">
           {peer.slice(-2)}
         </div>
-        <div className="flex min-w-0 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-mono text-sm">{peer}</span>
           <span className="text-[10px] text-zinc-500">offline-first</span>
         </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => call(peer)}
+          disabled={callInFlight}
+          aria-label="Voice call"
+        >
+          <Phone className="size-4" />
+        </Button>
       </header>
 
       <div

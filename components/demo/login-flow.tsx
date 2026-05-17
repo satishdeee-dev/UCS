@@ -39,9 +39,9 @@ export function LoginFlow({ onSignedIn }: { onSignedIn: (phone: string) => void 
     <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col items-center justify-center px-6 py-12">
       <Card className="w-full">
         <CardHeader className="flex flex-col gap-1">
-          <h1 className="text-xl font-semibold">UCS Demo</h1>
+          <h1 className="text-xl font-semibold">commapp</h1>
           <p className="text-sm text-zinc-500">
-            Offline-first messaging — works without a network.
+            Offline-first messaging and calls — works without a network.
           </p>
         </CardHeader>
         <CardContent>

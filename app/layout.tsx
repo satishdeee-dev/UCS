@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "UCS — Offline-first comms for field teams",
+  title: "commapp — Offline messaging & calls",
   description:
-    "Messaging, voice notes, and on-device transcription that works without a network. Syncs when you reconnect.",
+    "Offline-first messaging, voice notes, and calls between dummy numbers. Works without a network.",
 };
 
 export default function RootLayout({
