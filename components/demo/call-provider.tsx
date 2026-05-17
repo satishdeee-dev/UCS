@@ -10,31 +10,38 @@ import {
   type ReactNode,
 } from "react";
 
+export type CallKind = "audio" | "video";
+
 type CallState =
   | { phase: "idle" }
-  | { phase: "outgoing"; peer: string; callId: string }
+  | { phase: "outgoing"; peer: string; callId: string; kind: CallKind }
   | {
       phase: "incoming";
       peer: string;
       callId: string;
+      kind: CallKind;
       offer: RTCSessionDescriptionInit;
     }
   | {
       phase: "active";
       peer: string;
       callId: string;
+      kind: CallKind;
       startedAt: number;
       muted: boolean;
+      cameraOff: boolean;
     };
 
 interface CallApi {
   state: CallState;
+  localStream: MediaStream | null;
   remoteStream: MediaStream | null;
-  call: (peer: string) => Promise<void>;
+  call: (peer: string, kind?: CallKind) => Promise<void>;
   accept: () => Promise<void>;
   decline: () => void;
   hangup: () => void;
   toggleMute: () => void;
+  toggleCamera: () => void;
 }
 
 const CallContext = createContext<CallApi | null>(null);
@@ -46,7 +53,14 @@ export function useCall() {
 }
 
 type Signal =
-  | { type: "call-offer"; from: string; to: string; callId: string; sdp: string }
+  | {
+      type: "call-offer";
+      from: string;
+      to: string;
+      callId: string;
+      kind: CallKind;
+      sdp: string;
+    }
   | {
       type: "call-answer";
       from: string;
@@ -83,6 +97,7 @@ export function CallProvider({
 }) {
   const [state, setState] = useState<CallState>({ phase: "idle" });
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -99,6 +114,7 @@ export function CallProvider({
     pcRef.current = null;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
+    setLocalStream(null);
     pendingIceRef.current = [];
     setRemoteStream(null);
   }, []);
@@ -147,11 +163,19 @@ export function CallProvider({
     [self, sendSignal, cleanup],
   );
 
-  const acquireMic = useCallback(async (pc: RTCPeerConnection) => {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    localStreamRef.current = stream;
-    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
-  }, []);
+  const acquireMedia = useCallback(
+    async (pc: RTCPeerConnection, kind: CallKind) => {
+      const constraints: MediaStreamConstraints =
+        kind === "video"
+          ? { audio: true, video: { width: 640, height: 480 } }
+          : { audio: true };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      localStreamRef.current = stream;
+      setLocalStream(stream);
+      stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+    },
+    [],
+  );
 
   const drainPendingIce = useCallback(async (pc: RTCPeerConnection) => {
     for (const c of pendingIceRef.current) {
@@ -165,14 +189,14 @@ export function CallProvider({
   }, []);
 
   const call = useCallback(
-    async (peer: string) => {
+    async (peer: string, kind: CallKind = "audio") => {
       if (!self || stateRef.current.phase !== "idle") return;
       const callId = crypto.randomUUID();
-      setState({ phase: "outgoing", peer, callId });
+      setState({ phase: "outgoing", peer, callId, kind });
 
       try {
         const pc = setupPeerConnection(peer, callId);
-        await acquireMic(pc);
+        await acquireMedia(pc, kind);
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
@@ -181,6 +205,7 @@ export function CallProvider({
           from: self,
           to: peer,
           callId,
+          kind,
           sdp: offer.sdp ?? "",
         });
       } catch (err) {
@@ -189,7 +214,7 @@ export function CallProvider({
         setState({ phase: "idle" });
       }
     },
-    [self, setupPeerConnection, acquireMic, sendSignal, cleanup],
+    [self, setupPeerConnection, acquireMedia, sendSignal, cleanup],
   );
 
   const accept = useCallback(async () => {
@@ -198,7 +223,7 @@ export function CallProvider({
 
     try {
       const pc = setupPeerConnection(current.peer, current.callId);
-      await acquireMic(pc);
+      await acquireMedia(pc, current.kind);
       await pc.setRemoteDescription(current.offer);
       await drainPendingIce(pc);
       const answer = await pc.createAnswer();
@@ -216,8 +241,10 @@ export function CallProvider({
         phase: "active",
         peer: current.peer,
         callId: current.callId,
+        kind: current.kind,
         startedAt: Date.now(),
         muted: false,
+        cameraOff: false,
       });
     } catch (err) {
       console.error("accept() failed", err);
@@ -227,7 +254,7 @@ export function CallProvider({
   }, [
     self,
     setupPeerConnection,
-    acquireMic,
+    acquireMedia,
     drainPendingIce,
     sendSignal,
     cleanup,
@@ -263,9 +290,21 @@ export function CallProvider({
   const toggleMute = useCallback(() => {
     const stream = localStreamRef.current;
     if (!stream) return;
-    const next = !stream.getAudioTracks()[0]?.enabled === true;
-    stream.getAudioTracks().forEach((t) => (t.enabled = !next));
-    setState((s) => (s.phase === "active" ? { ...s, muted: next } : s));
+    const audioTrack = stream.getAudioTracks()[0];
+    if (!audioTrack) return;
+    const nextMuted = audioTrack.enabled; // currently on → will be muted
+    stream.getAudioTracks().forEach((t) => (t.enabled = !nextMuted));
+    setState((s) => (s.phase === "active" ? { ...s, muted: nextMuted } : s));
+  }, []);
+
+  const toggleCamera = useCallback(() => {
+    const stream = localStreamRef.current;
+    if (!stream) return;
+    const videoTrack = stream.getVideoTracks()[0];
+    if (!videoTrack) return;
+    const nextOff = videoTrack.enabled;
+    stream.getVideoTracks().forEach((t) => (t.enabled = !nextOff));
+    setState((s) => (s.phase === "active" ? { ...s, cameraOff: nextOff } : s));
   }, []);
 
   // Wire up the signaling channel.
@@ -294,6 +333,7 @@ export function CallProvider({
           phase: "incoming",
           peer: msg.from,
           callId: msg.callId,
+          kind: msg.kind,
           offer: { type: "offer", sdp: msg.sdp },
         });
         return;
@@ -309,8 +349,10 @@ export function CallProvider({
             phase: "active",
             peer: current.peer,
             callId: current.callId,
+            kind: current.kind,
             startedAt: Date.now(),
             muted: false,
+            cameraOff: false,
           });
         } catch (err) {
           console.error("setRemoteDescription (answer) failed", err);
@@ -360,7 +402,17 @@ export function CallProvider({
 
   return (
     <CallContext.Provider
-      value={{ state, remoteStream, call, accept, decline, hangup, toggleMute }}
+      value={{
+        state,
+        localStream,
+        remoteStream,
+        call,
+        accept,
+        decline,
+        hangup,
+        toggleMute,
+        toggleCamera,
+      }}
     >
       {children}
     </CallContext.Provider>

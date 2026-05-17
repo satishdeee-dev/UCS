@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowLeft, Phone } from "lucide-react";
+import { ArrowLeft, Phone, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { db, type LocalMessage, type LocalVoiceNote } from "@/lib/db";
 import { conversationIdFor } from "@/lib/demo/conversations";
@@ -92,12 +92,18 @@ export function Chat({ self, peer, onBack }: Props) {
   const callInFlight = callState.phase !== "idle";
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-2xl flex-1 flex-col">
-      <header className="flex items-center gap-2 border-b px-3 py-3">
-        <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back">
+    <main className="flex h-full min-h-svh w-full flex-1 flex-col bg-background">
+      <header className="flex items-center gap-2 border-b bg-card px-3 py-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onBack}
+          aria-label="Back"
+          className="md:hidden"
+        >
           <ArrowLeft className="size-4" />
         </Button>
-        <div className="flex size-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">
+        <div className="flex size-9 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 dark:bg-indigo-900/70 dark:text-indigo-200">
           {peer.slice(-2)}
         </div>
         <div className="flex min-w-0 flex-1 flex-col">
@@ -107,7 +113,16 @@ export function Chat({ self, peer, onBack }: Props) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => call(peer)}
+          onClick={() => call(peer, "video")}
+          disabled={callInFlight}
+          aria-label="Video call"
+        >
+          <Video className="size-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => call(peer, "audio")}
           disabled={callInFlight}
           aria-label="Voice call"
         >
