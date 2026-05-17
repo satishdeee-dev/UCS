@@ -49,7 +49,7 @@ export function Settings({ self, onBack, onSignedOut }: Props) {
           <CardHeader className="flex flex-row items-center gap-3">
             <Logo size={44} />
             <div className="flex flex-col">
-              <span className="text-base font-semibold">commapp</span>
+              <span className="text-base font-semibold">CommApp</span>
               <span className="text-xs text-zinc-500">version {VERSION}</span>
             </div>
           </CardHeader>

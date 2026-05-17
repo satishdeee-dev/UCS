@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "commapp — Offline messaging & calls",
+  title: "CommApp — Offline messaging & calls",
   description:
     "Offline-first messaging, voice notes, and calls between dummy numbers. Works without a network.",
 };

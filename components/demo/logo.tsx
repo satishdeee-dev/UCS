@@ -13,7 +13,7 @@ export function Logo({ size = 40, className }: LogoProps) {
       className={className}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="commapp"
+      aria-label="CommApp"
       role="img"
     >
       <defs>
@@ -36,7 +36,7 @@ export function Wordmark({ className }: { className?: string }) {
   return (
     <div className={`flex items-center gap-2 ${className ?? ""}`}>
       <Logo size={28} />
-      <span className="text-lg font-semibold tracking-tight">commapp</span>
+      <span className="text-lg font-semibold tracking-tight">CommApp</span>
     </div>
   );
 }

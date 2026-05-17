@@ -40,7 +40,7 @@ export function LoginFlow({ onSignedIn }: { onSignedIn: (phone: string) => void 
     <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col items-center justify-center px-6 py-12">
       <div className="mb-6 flex flex-col items-center gap-3">
         <Logo size={56} />
-        <h1 className="text-2xl font-semibold tracking-tight">commapp</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">CommApp</h1>
         <p className="text-center text-sm text-zinc-500">
           Offline-first messaging and calls — works without a network.
         </p>

@@ -105,7 +105,7 @@ function EmptyChatPlaceholder() {
         <h2 className="text-lg font-semibold">Pick a conversation</h2>
         <p className="text-sm text-zinc-500">
           Or tap <span className="font-medium">New chat</span> in the sidebar to
-          start one. Open commapp in another tab as a different phone number to
+          start one. Open CommApp in another tab as a different phone number to
           chat or call.
         </p>
       </div>

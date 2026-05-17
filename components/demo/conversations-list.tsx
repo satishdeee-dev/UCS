@@ -85,7 +85,7 @@ export function ConversationsList({
         <div className="flex items-center gap-2">
           <Logo size={32} />
           <div className="flex flex-col">
-            <span className="text-sm font-semibold leading-tight">commapp</span>
+            <span className="text-sm font-semibold leading-tight">CommApp</span>
             <span className="font-mono text-[10px] text-zinc-500">{self}</span>
           </div>
         </div>
