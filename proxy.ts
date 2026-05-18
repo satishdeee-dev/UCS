@@ -5,7 +5,12 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // /demo is the offline-first demo (no auth). / redirects there.
-  if (path === "/" || path.startsWith("/demo")) {
+  // /api/push is the push backend, also no auth (dummy-phone identity).
+  if (
+    path === "/" ||
+    path.startsWith("/demo") ||
+    path.startsWith("/api/push")
+  ) {
     return NextResponse.next();
   }
 
