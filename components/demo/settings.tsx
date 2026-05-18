@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowLeft, Camera, LogOut, Trash2 } from "lucide-react";
+import { Camera, LogOut, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { db } from "@/lib/db";
@@ -15,14 +15,13 @@ import { Logo } from "./logo";
 
 interface Props {
   self: string;
-  onBack: () => void;
   onSignedOut: () => void;
 }
 
 const VERSION = "0.6 — demo";
 const MAX_AVATAR_INPUT_BYTES = 10 * 1024 * 1024; // 10 MB raw; resized to 256² JPEG before storing
 
-export function Settings({ self, onBack, onSignedOut }: Props) {
+export function Settings({ self, onSignedOut }: Props) {
   const me = useLiveQuery(() => db.users.get(self), [self]);
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -97,12 +96,9 @@ export function Settings({ self, onBack, onSignedOut }: Props) {
   }
 
   return (
-    <main className="flex h-full min-h-svh flex-col bg-background">
+    <main className="flex h-full flex-1 flex-col overflow-hidden bg-background">
       <header className="flex items-center gap-2 border-b bg-card px-3 py-3">
-        <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back" className="md:hidden">
-          <ArrowLeft className="size-4" />
-        </Button>
-        <h1 className="text-lg font-semibold tracking-tight">Settings</h1>
+        <h1 className="text-lg font-semibold tracking-tight">Profile</h1>
       </header>
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">

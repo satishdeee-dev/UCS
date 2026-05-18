@@ -52,6 +52,7 @@ export function useCall() {
   return ctx;
 }
 
+import { db } from "@/lib/db";
 import { emit, listen, type BusEvent } from "@/lib/demo/transport";
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -76,6 +77,50 @@ export function CallProvider({
   const localStreamRef = useRef<MediaStream | null>(null);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const stateRef = useRef<CallState>(state);
+
+  // Tracking metadata for the current call so we can write a history row
+  // when it ends, regardless of how it ended.
+  const recordRef = useRef<{
+    peer: string;
+    mediaKind: CallKind;
+    direction: "outgoing" | "incoming";
+    startedAt: number;
+    acceptedAt: number | null;
+  } | null>(null);
+
+  function beginRecord(
+    peer: string,
+    mediaKind: CallKind,
+    direction: "outgoing" | "incoming",
+  ) {
+    recordRef.current = {
+      peer,
+      mediaKind,
+      direction,
+      startedAt: Date.now(),
+      acceptedAt: null,
+    };
+  }
+
+  function markConnected() {
+    if (recordRef.current && recordRef.current.acceptedAt === null) {
+      recordRef.current.acceptedAt = Date.now();
+    }
+  }
+
+  async function persistRecord() {
+    const r = recordRef.current;
+    if (!r) return;
+    recordRef.current = null;
+    await db.callHistory.add({
+      peer: r.peer,
+      mediaKind: r.mediaKind,
+      direction: r.direction,
+      startedAt: r.acceptedAt ?? r.startedAt,
+      endedAt: Date.now(),
+      connected: r.acceptedAt !== null,
+    });
+  }
 
   useEffect(() => {
     stateRef.current = state;
@@ -129,6 +174,7 @@ export function CallProvider({
           pc.connectionState === "closed"
         ) {
           if (stateRef.current.phase === "active") {
+            void persistRecord();
             cleanup();
             setState({ phase: "idle" });
           }
@@ -170,6 +216,7 @@ export function CallProvider({
       if (!self || stateRef.current.phase !== "idle") return;
       const callId = crypto.randomUUID();
       setState({ phase: "outgoing", peer, callId, kind });
+      beginRecord(peer, kind, "outgoing");
 
       try {
         const pc = setupPeerConnection(peer, callId);
@@ -187,6 +234,7 @@ export function CallProvider({
         });
       } catch (err) {
         console.error("call() failed", err);
+        await persistRecord();
         cleanup();
         setState({ phase: "idle" });
       }
@@ -214,6 +262,7 @@ export function CallProvider({
         sdp: answer.sdp ?? "",
       });
 
+      markConnected();
       setState({
         phase: "active",
         peer: current.peer,
@@ -225,6 +274,7 @@ export function CallProvider({
       });
     } catch (err) {
       console.error("accept() failed", err);
+      await persistRecord();
       cleanup();
       setState({ phase: "idle" });
     }
@@ -247,6 +297,7 @@ export function CallProvider({
       callId: current.callId,
       reason: "declined",
     });
+    void persistRecord();
     setState({ phase: "idle" });
   }, [self, sendSignal]);
 
@@ -260,6 +311,7 @@ export function CallProvider({
       callId: current.callId,
       reason: "ended",
     });
+    void persistRecord();
     cleanup();
     setState({ phase: "idle" });
   }, [self, sendSignal, cleanup]);
@@ -314,6 +366,7 @@ export function CallProvider({
           });
           return;
         }
+        beginRecord(msg.from, msg.mediaKind, "incoming");
         setState({
           phase: "incoming",
           peer: msg.from,
@@ -330,6 +383,7 @@ export function CallProvider({
         try {
           await pc.setRemoteDescription({ type: "answer", sdp: msg.sdp });
           await drainPendingIce(pc);
+          markConnected();
           setState({
             phase: "active",
             peer: current.peer,
@@ -341,6 +395,7 @@ export function CallProvider({
           });
         } catch (err) {
           console.error("setRemoteDescription (answer) failed", err);
+          await persistRecord();
           cleanup();
           setState({ phase: "idle" });
         }
@@ -365,6 +420,7 @@ export function CallProvider({
 
       if (msg.kind === "call-end") {
         if (current.phase === "idle" || current.callId !== msg.callId) return;
+        await persistRecord();
         cleanup();
         setState({ phase: "idle" });
         return;

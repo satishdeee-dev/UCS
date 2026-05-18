@@ -73,6 +73,16 @@ export function isGroupId(id: string): boolean {
   return id.startsWith("group:");
 }
 
+export interface LocalCallRecord {
+  id?: number;
+  peer: string;
+  mediaKind: "audio" | "video";
+  direction: "outgoing" | "incoming";
+  startedAt: number;
+  endedAt: number;
+  connected: boolean;
+}
+
 class UcsDb extends Dexie {
   messages!: Table<LocalMessage, string>;
   voiceNotes!: Table<LocalVoiceNote, string>;
@@ -80,6 +90,7 @@ class UcsDb extends Dexie {
   syncQueue!: Table<SyncQueueItem, number>;
   vectors!: Table<LocalVector, string>;
   groups!: Table<LocalGroup, string>;
+  callHistory!: Table<LocalCallRecord, number>;
 
   constructor() {
     super("ucs");
@@ -92,6 +103,9 @@ class UcsDb extends Dexie {
     });
     this.version(2).stores({
       groups: "id, createdAt",
+    });
+    this.version(3).stores({
+      callHistory: "++id, peer, startedAt",
     });
   }
 }

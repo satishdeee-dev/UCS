@@ -12,27 +12,25 @@ import {
 import { clearIdentity, getIdentity } from "@/lib/demo/identity";
 import { base64ToBlob, blobToBase64 } from "@/lib/demo/encoding";
 import { emit, listen } from "@/lib/demo/transport";
+import { conversationIdFor } from "@/lib/demo/conversations";
 import { AnimatedBackground } from "./animated-background";
+import { BottomBar, type Tab } from "./bottom-bar";
 import { CallProvider } from "./call-provider";
 import { CallOverlay } from "./call-overlay";
-import { LoginFlow } from "./login-flow";
-import { ConversationsList } from "./conversations-list";
+import { CallsView } from "./calls-view";
 import { Chat } from "./chat";
+import { ConversationsList } from "./conversations-list";
 import { GroupChat } from "./group-chat";
-import { Settings } from "./settings";
 import { Logo } from "./logo";
-import { conversationIdFor } from "@/lib/demo/conversations";
+import { LoginFlow } from "./login-flow";
+import { Settings } from "./settings";
 
 type Hydration = { state: "loading" } | { state: "ready"; self: string | null };
 
-type View =
-  | { type: "chats" }
-  | { type: "chat"; target: string } // peer phone OR group id
-  | { type: "settings" };
-
 export function DemoApp() {
   const [hydration, setHydration] = useState<Hydration>({ state: "loading" });
-  const [view, setView] = useState<View>({ type: "chats" });
+  const [tab, setTab] = useState<Tab>("chats");
+  const [target, setTarget] = useState<string | null>(null);
 
   useEffect(() => {
     setHydration({ state: "ready", self: getIdentity() });
@@ -43,7 +41,6 @@ export function DemoApp() {
   const askedAvatarRef = useRef<Set<string>>(new Set());
   const askedGroupRef = useRef<Set<string>>(new Set());
 
-  // Inbound events from peers (cross-device, via Supabase Realtime).
   useEffect(() => {
     if (!self) return;
     return listen(async (event) => {
@@ -73,7 +70,6 @@ export function DemoApp() {
 
         const sender = event.from;
 
-        // Ask for avatar if we don't have one yet.
         if (!askedAvatarRef.current.has(sender)) {
           const existing = await db.users.get(sender);
           if (!existing?.avatarBlob) {
@@ -82,18 +78,12 @@ export function DemoApp() {
           }
         }
 
-        // Group message for a group we don't know about? Ask the sender.
         if (isGroupId(wire.conversationId)) {
           const groupId = wire.conversationId;
           const existing = await db.groups.get(groupId);
           if (!existing && !askedGroupRef.current.has(groupId)) {
             askedGroupRef.current.add(groupId);
-            void emit({
-              kind: "group-request",
-              from: self,
-              to: sender,
-              groupId,
-            });
+            void emit({ kind: "group-request", from: self, to: sender, groupId });
           }
         }
         return;
@@ -133,7 +123,7 @@ export function DemoApp() {
 
       if (event.kind === "group-created") {
         const g = event.group;
-        if (!g.members.includes(self)) return; // not for us
+        if (!g.members.includes(self)) return;
         const local: LocalGroup = {
           id: g.id,
           name: g.name,
@@ -149,7 +139,7 @@ export function DemoApp() {
         if (event.to !== self) return;
         const g = await db.groups.get(event.groupId);
         if (!g) return;
-        if (!g.members.includes(event.from)) return; // requester isn't a member
+        if (!g.members.includes(event.from)) return;
         void emit({
           kind: "group-created",
           from: self,
@@ -166,7 +156,6 @@ export function DemoApp() {
     });
   }, [self]);
 
-  // Announce our avatar (if any) when we sign in.
   useEffect(() => {
     if (!self) return;
     let cancelled = false;
@@ -197,12 +186,12 @@ export function DemoApp() {
         createdAt: Date.now(),
       };
       await db.groups.put(group);
-      // Broadcast to each member except self.
       for (const m of members) {
         if (m === self) continue;
         void emit({ kind: "group-created", from: self, group });
       }
-      setView({ type: "chat", target: id });
+      setTab("chats");
+      setTarget(id);
     },
     [self],
   );
@@ -254,64 +243,83 @@ export function DemoApp() {
         <LoginFlow
           onSignedIn={(phone) => {
             setHydration({ state: "ready", self: phone });
-            setView({ type: "chats" });
+            setTab("chats");
+            setTarget(null);
           }}
         />
       </CallProvider>
     );
   }
 
-  const onMobileShowChats = view.type === "chats";
-  const onMobileShowRightPane = view.type !== "chats";
+  const inChatDetail = tab === "chats" && target !== null;
 
   return (
     <CallProvider self={self}>
       <div className="md:grid md:h-svh md:grid-cols-[320px_1fr]">
         <aside
           className={cn(
-            "md:flex md:flex-col md:overflow-hidden md:border-r",
-            !onMobileShowChats && "hidden md:flex",
+            "flex h-svh flex-col md:h-auto md:overflow-hidden md:border-r",
+            inChatDetail && "hidden md:flex",
           )}
         >
-          <ConversationsList
-            self={self}
-            selectedTarget={view.type === "chat" ? view.target : null}
-            onSelect={(target) => setView({ type: "chat", target })}
-            onOpenSettings={() => setView({ type: "settings" })}
-            onCreateGroup={createGroup}
-            onSendBroadcast={sendBroadcast}
+          <div className="flex flex-1 flex-col overflow-hidden">
+            {tab === "chats" && (
+              <ConversationsList
+                self={self}
+                selectedTarget={target}
+                onSelect={(t) => setTarget(t)}
+                onCreateGroup={createGroup}
+                onSendBroadcast={sendBroadcast}
+              />
+            )}
+            {tab === "calls" && (
+              <CallsView
+                onOpenChat={(peer) => {
+                  setTab("chats");
+                  setTarget(peer);
+                }}
+              />
+            )}
+            {tab === "profile" && (
+              <Settings
+                self={self}
+                onSignedOut={() => {
+                  clearIdentity();
+                  setHydration({ state: "ready", self: null });
+                  setTab("chats");
+                  setTarget(null);
+                }}
+              />
+            )}
+          </div>
+          <BottomBar
+            active={tab}
+            onChange={(next) => {
+              setTab(next);
+              if (next !== "chats") setTarget(null);
+            }}
           />
         </aside>
         <section
           className={cn(
             "md:flex md:flex-col md:overflow-hidden",
-            !onMobileShowRightPane && "hidden md:flex",
+            !inChatDetail && "hidden md:flex",
           )}
         >
-          {view.type === "chat" ? (
-            isGroupId(view.target) ? (
+          {inChatDetail && target ? (
+            isGroupId(target) ? (
               <GroupChat
                 self={self}
-                groupId={view.target}
-                onBack={() => setView({ type: "chats" })}
+                groupId={target}
+                onBack={() => setTarget(null)}
               />
             ) : (
               <Chat
                 self={self}
-                peer={view.target}
-                onBack={() => setView({ type: "chats" })}
+                peer={target}
+                onBack={() => setTarget(null)}
               />
             )
-          ) : view.type === "settings" ? (
-            <Settings
-              self={self}
-              onBack={() => setView({ type: "chats" })}
-              onSignedOut={() => {
-                clearIdentity();
-                setHydration({ state: "ready", self: null });
-                setView({ type: "chats" });
-              }}
-            />
           ) : (
             <EmptyChatPlaceholder />
           )}

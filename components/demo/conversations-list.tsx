@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Megaphone, Plus, Settings as SettingsIcon, Users } from "lucide-react";
+import { Megaphone, Plus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { db } from "@/lib/db";
@@ -17,7 +17,6 @@ interface Props {
   self: string;
   selectedTarget: string | null; // peer phone OR groupId
   onSelect: (target: string) => void;
-  onOpenSettings: () => void;
   onCreateGroup: (name: string, members: string[]) => Promise<void>;
   onSendBroadcast: (recipients: string[], body: string) => Promise<void>;
 }
@@ -34,7 +33,6 @@ export function ConversationsList({
   self,
   selectedTarget,
   onSelect,
-  onOpenSettings,
   onCreateGroup,
   onSendBroadcast,
 }: Props) {
@@ -145,23 +143,13 @@ export function ConversationsList({
   }
 
   return (
-    <main className="flex h-full min-h-svh flex-col bg-background">
-      <header className="flex items-center justify-between border-b bg-card px-3 py-3">
-        <div className="flex items-center gap-2">
-          <Logo size={32} />
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold leading-tight">CommApp</span>
-            <span className="font-mono text-[10px] text-zinc-500">{self}</span>
-          </div>
+    <main className="flex h-full flex-1 flex-col overflow-hidden bg-background">
+      <header className="flex items-center gap-2 border-b bg-card px-3 py-3">
+        <Logo size={32} />
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold leading-tight">Chats</span>
+          <span className="font-mono text-[10px] text-zinc-500">{self}</span>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onOpenSettings}
-          aria-label="Settings"
-        >
-          <SettingsIcon className="size-4" />
-        </Button>
       </header>
 
       <div className="flex flex-col gap-2 border-b bg-card px-3 py-3">
