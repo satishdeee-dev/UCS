@@ -87,6 +87,7 @@ export function DemoApp() {
           createdAt: wire.createdAt,
           syncedAt: wire.syncedAt,
           attachment,
+          location: wire.location,
         };
         void db.messages.put(local);
 
@@ -99,11 +100,13 @@ export function DemoApp() {
           ? `${groupForTitle?.name ?? "Group"} — ${wire.senderId}`
           : wire.senderId;
         const body = wire.body
-          || (wire.attachment
-            ? wire.attachment.type.startsWith("image/")
-              ? "📷 Photo"
-              : `📎 ${wire.attachment.name}`
-            : "New message");
+          || (wire.location
+            ? "📍 Location"
+            : wire.attachment
+              ? wire.attachment.type.startsWith("image/")
+                ? "📷 Photo"
+                : `📎 ${wire.attachment.name}`
+              : "New message");
         notify(title, { body, tag: wire.conversationId });
         playMessageTone();
 

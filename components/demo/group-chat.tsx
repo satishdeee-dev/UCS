@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowLeft, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { db, type LocalMessage, type LocalVoiceNote } from "@/lib/db";
+import { db, type LocalLocation, type LocalMessage, type LocalVoiceNote } from "@/lib/db";
 import { blobToBase64 } from "@/lib/demo/encoding";
 import { sendPush } from "@/lib/demo/push";
 import { emit } from "@/lib/demo/transport";
@@ -87,6 +87,42 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
       to: recipients,
       title: `${group?.name ?? "Group"} — ${self}`,
       body,
+      conversationId: groupId,
+      tag: groupId,
+    });
+  }
+
+  async function sendLocation(location: LocalLocation) {
+    const message: LocalMessage = {
+      id: crypto.randomUUID(),
+      conversationId: groupId,
+      senderId: self,
+      body: "",
+      createdAt: Date.now(),
+      syncedAt: null,
+      location,
+    };
+    await db.messages.add(message);
+    for (const to of recipients) {
+      void emit({
+        kind: "message",
+        from: self,
+        to,
+        message: {
+          id: message.id,
+          conversationId: message.conversationId,
+          senderId: message.senderId,
+          body: message.body,
+          createdAt: message.createdAt,
+          syncedAt: message.syncedAt,
+          location,
+        },
+      });
+    }
+    sendPush({
+      to: recipients,
+      title: `${group?.name ?? "Group"} — ${self}`,
+      body: "📍 Location",
       conversationId: groupId,
       tag: groupId,
     });
@@ -264,6 +300,7 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
                   kind="text"
                   body={item.data.body}
                   attachment={item.data.attachment}
+                  location={item.data.location}
                   createdAt={item.data.createdAt}
                   outgoing={outgoing}
                 />
@@ -285,6 +322,7 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
         onSendText={sendText}
         onSendVoice={sendVoice}
         onSendAttachment={sendAttachment}
+        onSendLocation={sendLocation}
       />
     </main>
   );

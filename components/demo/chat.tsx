@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowLeft, Phone, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { db, type LocalMessage, type LocalVoiceNote } from "@/lib/db";
+import { db, type LocalLocation, type LocalMessage, type LocalVoiceNote } from "@/lib/db";
 import { conversationIdFor } from "@/lib/demo/conversations";
 import { transcribe, warmTranscriber } from "@/lib/ai/transcribe";
 import { blobToBase64 } from "@/lib/demo/encoding";
@@ -87,6 +87,40 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
       to: [peer],
       title: self,
       body,
+      conversationId,
+      tag: conversationId,
+    });
+  }
+
+  async function sendLocation(location: LocalLocation) {
+    const message: LocalMessage = {
+      id: crypto.randomUUID(),
+      conversationId,
+      senderId: self,
+      body: "",
+      createdAt: Date.now(),
+      syncedAt: null,
+      location,
+    };
+    await db.messages.add(message);
+    void emit({
+      kind: "message",
+      from: self,
+      to: peer,
+      message: {
+        id: message.id,
+        conversationId: message.conversationId,
+        senderId: message.senderId,
+        body: message.body,
+        createdAt: message.createdAt,
+        syncedAt: message.syncedAt,
+        location,
+      },
+    });
+    sendPush({
+      to: [peer],
+      title: self,
+      body: "📍 Location",
       conversationId,
       tag: conversationId,
     });
@@ -261,6 +295,7 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
                 kind="text"
                 body={item.data.body}
                 attachment={item.data.attachment}
+                location={item.data.location}
                 createdAt={item.data.createdAt}
                 outgoing={item.data.senderId === self}
               />
@@ -283,6 +318,7 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
         onSendText={sendText}
         onSendVoice={sendVoice}
         onSendAttachment={sendAttachment}
+        onSendLocation={sendLocation}
       />
     </main>
   );

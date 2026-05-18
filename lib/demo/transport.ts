@@ -23,6 +23,12 @@ export interface WireAttachment {
   size: number;
 }
 
+export interface WireLocation {
+  lat: number;
+  lng: number;
+  accuracy?: number;
+}
+
 export interface LocalMessageWire {
   id: string;
   conversationId: string;
@@ -31,6 +37,7 @@ export interface LocalMessageWire {
   createdAt: number;
   syncedAt: number | null;
   attachment?: WireAttachment;
+  location?: WireLocation;
 }
 
 export interface WireAvatar {

@@ -58,11 +58,13 @@ export function ConversationsList({
       if (!conversationIncludes(cid, self)) continue;
       const peer = getPeer(cid, self);
       if (!peer) continue;
-      const preview = m.attachment
-        ? m.attachment.type.startsWith("image/")
-          ? "📷 Photo"
-          : `📎 ${m.attachment.name}`
-        : m.body;
+      const preview = m.location
+        ? "📍 Location"
+        : m.attachment
+          ? m.attachment.type.startsWith("image/")
+            ? "📷 Photo"
+            : `📎 ${m.attachment.name}`
+          : m.body;
       const ex = map.get(peer);
       if (!ex || m.createdAt > ex.createdAt) {
         map.set(peer, {
@@ -105,11 +107,14 @@ export function ConversationsList({
       if (last) {
         createdAt = last.createdAt;
         if ("body" in last) {
-          preview = last.attachment
-            ? last.attachment.type.startsWith("image/")
-              ? "📷 Photo"
-              : `📎 ${last.attachment.name}`
-            : `${last.senderId === self ? "You" : last.senderId}: ${last.body}`;
+          const who = last.senderId === self ? "You" : last.senderId;
+          preview = last.location
+            ? `${who}: 📍 Location`
+            : last.attachment
+              ? last.attachment.type.startsWith("image/")
+                ? `${who}: 📷 Photo`
+                : `${who}: 📎 ${last.attachment.name}`
+              : `${who}: ${last.body}`;
         } else {
           preview = `${last.senderId === self ? "You" : last.senderId}: 🎤 Voice note`;
         }

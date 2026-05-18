@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, FileText, Loader2 } from "lucide-react";
-import type { LocalAttachment } from "@/lib/db";
+import { Download, ExternalLink, FileText, Loader2, MapPin } from "lucide-react";
+import type { LocalAttachment, LocalLocation } from "@/lib/db";
 import { formatBytes } from "@/lib/demo/encoding";
 
 type Common = {
@@ -11,7 +11,12 @@ type Common = {
 };
 
 export type BubbleProps =
-  | (Common & { kind: "text"; body: string; attachment?: LocalAttachment })
+  | (Common & {
+      kind: "text";
+      body: string;
+      attachment?: LocalAttachment;
+      location?: LocalLocation;
+    })
   | (Common & {
       kind: "voice";
       audioBlob: Blob;
@@ -38,6 +43,12 @@ export function MessageBubble(props: BubbleProps) {
             {props.attachment && (
               <AttachmentView
                 attachment={props.attachment}
+                outgoing={props.outgoing}
+              />
+            )}
+            {props.location && (
+              <LocationView
+                location={props.location}
                 outgoing={props.outgoing}
               />
             )}
@@ -112,6 +123,44 @@ function AttachmentView({
         </span>
       </div>
       <Download className="size-4 shrink-0 opacity-80" />
+    </a>
+  );
+}
+
+function LocationView({
+  location,
+  outgoing,
+}: {
+  location: LocalLocation;
+  outgoing: boolean;
+}) {
+  const cardClass = outgoing
+    ? "border-white/30 bg-white/10 hover:bg-white/15"
+    : "border-zinc-300 bg-white hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800";
+
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`;
+  const coords = `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`;
+  const accuracy =
+    location.accuracy && Number.isFinite(location.accuracy)
+      ? ` · ±${Math.round(location.accuracy)}m`
+      : "";
+
+  return (
+    <a
+      href={mapsUrl}
+      target="_blank"
+      rel="noreferrer"
+      className={`flex w-64 items-center gap-3 rounded-md border px-3 py-2 transition-colors ${cardClass}`}
+    >
+      <MapPin className="size-7 shrink-0 opacity-80" />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="text-xs font-medium">📍 Location</span>
+        <span className="truncate font-mono text-[10px] opacity-80">
+          {coords}
+          {accuracy}
+        </span>
+      </div>
+      <ExternalLink className="size-4 shrink-0 opacity-80" />
     </a>
   );
 }

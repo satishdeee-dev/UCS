@@ -9,6 +9,12 @@ export interface LocalAttachment {
   size: number;
 }
 
+export interface LocalLocation {
+  lat: number;
+  lng: number;
+  accuracy?: number;
+}
+
 export interface LocalMessage {
   id: string;
   conversationId: string;
@@ -17,6 +23,7 @@ export interface LocalMessage {
   createdAt: number;
   syncedAt: number | null;
   attachment?: LocalAttachment;
+  location?: LocalLocation;
 }
 
 export interface LocalVoiceNote {

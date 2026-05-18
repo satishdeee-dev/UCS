@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, Paperclip, Send, Square } from "lucide-react";
+import { MapPin, Mic, Paperclip, Send, Smile, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { LocalLocation } from "@/lib/db";
+import { EmojiPicker } from "./emoji-picker";
 
 const MAX_ATTACHMENT_BYTES = 500 * 1024; // ~500 KB raw → ~670 KB base64, fits Realtime broadcast
 const ACCEPTED_TYPES =
@@ -13,19 +15,28 @@ interface Props {
   onSendText: (text: string) => void;
   onSendVoice: (blob: Blob, durationMs: number) => void;
   onSendAttachment: (file: File) => void | Promise<void>;
+  onSendLocation: (location: LocalLocation) => void | Promise<void>;
 }
 
-export function Composer({ onSendText, onSendVoice, onSendAttachment }: Props) {
+export function Composer({
+  onSendText,
+  onSendVoice,
+  onSendAttachment,
+  onSendLocation,
+}: Props) {
   const [text, setText] = useState("");
   const [recording, setRecording] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const startedAtRef = useRef(0);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {
@@ -59,6 +70,52 @@ export function Composer({ onSendText, onSendVoice, onSendAttachment }: Props) {
     }
     setError(null);
     await onSendAttachment(file);
+  }
+
+  function insertEmoji(emoji: string) {
+    const input = textInputRef.current;
+    if (!input) {
+      setText((t) => t + emoji);
+      return;
+    }
+    const start = input.selectionStart ?? text.length;
+    const end = input.selectionEnd ?? text.length;
+    const next = text.slice(0, start) + emoji + text.slice(end);
+    setText(next);
+    queueMicrotask(() => {
+      input.focus();
+      const caret = start + emoji.length;
+      input.setSelectionRange(caret, caret);
+    });
+  }
+
+  async function shareLocation() {
+    if (locating) return;
+    setError(null);
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setError("Geolocation not supported in this browser");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        void onSendLocation({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+        });
+      },
+      (err) => {
+        setLocating(false);
+        setError(
+          err.code === err.PERMISSION_DENIED
+            ? "Location permission denied"
+            : "Couldn't get your location",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30_000 },
+    );
   }
 
   async function startRecording() {
@@ -114,7 +171,7 @@ export function Composer({ onSendText, onSendVoice, onSendAttachment }: Props) {
   const elapsedLabel = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
   return (
-    <div className="flex flex-col gap-1 border-t bg-card px-3 py-2">
+    <div className="relative flex flex-col gap-1 border-t bg-card px-3 py-2">
       <input
         ref={fileInputRef}
         type="file"
@@ -122,6 +179,12 @@ export function Composer({ onSendText, onSendVoice, onSendAttachment }: Props) {
         accept={ACCEPTED_TYPES}
         onChange={handleFile}
       />
+      {showEmoji && (
+        <EmojiPicker
+          onSelect={insertEmoji}
+          onClose={() => setShowEmoji(false)}
+        />
+      )}
       {error && <p className="text-xs text-red-500">{error}</p>}
       {recording ? (
         <div className="flex items-center gap-3">
@@ -142,7 +205,18 @@ export function Composer({ onSendText, onSendVoice, onSendAttachment }: Props) {
           </Button>
         </div>
       ) : (
-        <form onSubmit={submitText} className="flex items-center gap-2">
+        <form onSubmit={submitText} className="flex items-center gap-1">
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={() => setShowEmoji((v) => !v)}
+            className="rounded-full"
+            aria-label="Insert emoji"
+            aria-expanded={showEmoji}
+          >
+            <Smile className="size-4" />
+          </Button>
           <Button
             type="button"
             size="icon"
@@ -153,7 +227,19 @@ export function Composer({ onSendText, onSendVoice, onSendAttachment }: Props) {
           >
             <Paperclip className="size-4" />
           </Button>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={shareLocation}
+            disabled={locating}
+            className="rounded-full"
+            aria-label="Share location"
+          >
+            <MapPin className={`size-4 ${locating ? "animate-pulse" : ""}`} />
+          </Button>
           <Input
+            ref={textInputRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Message"
