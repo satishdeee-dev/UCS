@@ -9,6 +9,7 @@ import { conversationIdFor } from "@/lib/demo/conversations";
 import { transcribe, warmTranscriber } from "@/lib/ai/transcribe";
 import { blobToBase64 } from "@/lib/demo/encoding";
 import { emit } from "@/lib/demo/transport";
+import { getWallpaperStyle, useWallpaper } from "@/lib/demo/wallpapers";
 import { Avatar } from "./avatar";
 import { useCall } from "./call-provider";
 import { Composer } from "./composer";
@@ -18,13 +19,14 @@ interface Props {
   self: string;
   peer: string;
   onBack: () => void;
+  onOpenProfile: () => void;
 }
 
 type Item =
   | { kind: "text"; data: LocalMessage }
   | { kind: "voice"; data: LocalVoiceNote };
 
-export function Chat({ self, peer, onBack }: Props) {
+export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
   const conversationId = useMemo(
     () => conversationIdFor(self, peer),
     [self, peer],
@@ -146,6 +148,7 @@ export function Chat({ self, peer, onBack }: Props) {
 
   const { call, state: callState } = useCall();
   const callInFlight = callState.phase !== "idle";
+  const wallpaperId = useWallpaper(conversationId);
 
   return (
     <main className="flex h-full min-h-svh w-full flex-1 flex-col bg-background">
@@ -159,11 +162,17 @@ export function Chat({ self, peer, onBack }: Props) {
         >
           <ArrowLeft className="size-4" />
         </Button>
-        <Avatar phone={peer} size={36} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate font-mono text-sm">{peer}</span>
-          <span className="text-[10px] text-zinc-500">offline-first</span>
-        </div>
+        <button
+          type="button"
+          onClick={onOpenProfile}
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-0.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
+        >
+          <Avatar phone={peer} size={36} />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate font-mono text-sm">{peer}</span>
+            <span className="text-[10px] text-zinc-500">tap for info</span>
+          </div>
+        </button>
         <Button
           variant="ghost"
           size="icon"
@@ -186,12 +195,8 @@ export function Chat({ self, peer, onBack }: Props) {
 
       <div
         ref={scrollRef}
-        className="flex flex-1 flex-col gap-2 overflow-y-auto bg-zinc-50 px-3 py-4 dark:bg-zinc-950"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 1px 1px, rgba(99,102,241,0.10) 1px, transparent 0)",
-          backgroundSize: "22px 22px",
-        }}
+        className="flex flex-1 flex-col gap-2 overflow-y-auto px-3 py-4"
+        style={getWallpaperStyle(wallpaperId)}
       >
         {items && items.length === 0 && (
           <p className="my-auto text-center text-sm text-zinc-500">

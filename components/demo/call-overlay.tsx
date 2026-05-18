@@ -8,10 +8,16 @@ import {
   PhoneOff,
   Video,
   VideoOff,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "./avatar";
 import { useCall } from "./call-provider";
+
+type SinkableAudio = HTMLAudioElement & {
+  setSinkId?: (id: string) => Promise<void>;
+};
 
 export function CallOverlay() {
   const {
@@ -28,9 +34,37 @@ export function CallOverlay() {
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const [elapsed, setElapsed] = useState(0);
+  const [speakerOn, setSpeakerOn] = useState(true);
 
   const isVideo =
     state.phase !== "idle" && state.kind === "video";
+
+  async function toggleSpeaker() {
+    const audio = remoteAudioRef.current as SinkableAudio | null;
+    const next = !speakerOn;
+    setSpeakerOn(next);
+    if (!audio) return;
+    // Best-effort routing: setSinkId is supported in Chromium and recent
+    // Firefox; iOS Safari ignores it. We at least swap volume so the user
+    // gets a tangible difference even when the API isn't available.
+    audio.volume = next ? 1 : 0.4;
+    if (!audio.setSinkId) return;
+    try {
+      if (next) {
+        await audio.setSinkId("");
+        return;
+      }
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const earpiece = devices.find(
+        (d) =>
+          d.kind === "audiooutput" &&
+          /earpiece|receiver|handset/i.test(d.label),
+      );
+      if (earpiece) await audio.setSinkId(earpiece.deviceId);
+    } catch (err) {
+      console.warn("setSinkId failed", err);
+    }
+  }
 
   // Attach remote stream to the right element.
   useEffect(() => {
@@ -117,11 +151,13 @@ export function CallOverlay() {
             muted={state.phase === "active" ? state.muted : false}
             cameraOff={state.phase === "active" ? state.cameraOff : false}
             isVideo
+            speakerOn={speakerOn}
             onAccept={accept}
             onDecline={decline}
             onHangup={hangup}
             onToggleMute={toggleMute}
             onToggleCamera={toggleCamera}
+            onToggleSpeaker={toggleSpeaker}
           />
         </>
       ) : (
@@ -138,11 +174,13 @@ export function CallOverlay() {
             muted={state.phase === "active" ? state.muted : false}
             cameraOff={false}
             isVideo={false}
+            speakerOn={speakerOn}
             onAccept={accept}
             onDecline={decline}
             onHangup={hangup}
             onToggleMute={toggleMute}
             onToggleCamera={toggleCamera}
+            onToggleSpeaker={toggleSpeaker}
           />
         </>
       )}
@@ -155,11 +193,13 @@ interface ControlsProps {
   muted: boolean;
   cameraOff: boolean;
   isVideo: boolean;
+  speakerOn: boolean;
   onAccept: () => void;
   onDecline: () => void;
   onHangup: () => void;
   onToggleMute: () => void;
   onToggleCamera: () => void;
+  onToggleSpeaker: () => void;
 }
 
 function CallControls({
@@ -167,11 +207,13 @@ function CallControls({
   muted,
   cameraOff,
   isVideo,
+  speakerOn,
   onAccept,
   onDecline,
   onHangup,
   onToggleMute,
   onToggleCamera,
+  onToggleSpeaker,
 }: ControlsProps) {
   return (
     <div className="relative z-10 flex items-center justify-center gap-6 bg-gradient-to-t from-black/80 to-transparent px-6 pb-10 pt-8">
@@ -203,6 +245,22 @@ function CallControls({
               aria-label={muted ? "Unmute" : "Mute"}
             >
               {muted ? <MicOff className="size-5" /> : <Mic className="size-5" />}
+            </Button>
+          )}
+          {phase === "active" && !isVideo && (
+            <Button
+              onClick={onToggleSpeaker}
+              variant="secondary"
+              size="icon"
+              className="size-14 rounded-full"
+              aria-label={speakerOn ? "Speaker off" : "Speaker on"}
+              aria-pressed={speakerOn}
+            >
+              {speakerOn ? (
+                <Volume2 className="size-5" />
+              ) : (
+                <VolumeX className="size-5" />
+              )}
             </Button>
           )}
           {phase === "active" && isVideo && (

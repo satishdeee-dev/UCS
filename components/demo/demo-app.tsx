@@ -13,12 +13,18 @@ import { clearIdentity, getIdentity } from "@/lib/demo/identity";
 import { base64ToBlob, blobToBase64 } from "@/lib/demo/encoding";
 import { emit, listen } from "@/lib/demo/transport";
 import { conversationIdFor } from "@/lib/demo/conversations";
+import {
+  ensureNotificationPermission,
+  notify,
+  playMessageTone,
+} from "@/lib/demo/notifications";
 import { AnimatedBackground } from "./animated-background";
 import { BottomBar, type Tab } from "./bottom-bar";
 import { CallProvider } from "./call-provider";
 import { CallOverlay } from "./call-overlay";
 import { CallsView } from "./calls-view";
 import { Chat } from "./chat";
+import { ChatProfile } from "./chat-profile";
 import { ConversationsList } from "./conversations-list";
 import { GroupChat } from "./group-chat";
 import { Logo } from "./logo";
@@ -31,12 +37,21 @@ export function DemoApp() {
   const [hydration, setHydration] = useState<Hydration>({ state: "loading" });
   const [tab, setTab] = useState<Tab>("chats");
   const [target, setTarget] = useState<string | null>(null);
+  const [chatSubView, setChatSubView] = useState<"messages" | "profile">(
+    "messages",
+  );
 
   useEffect(() => {
     setHydration({ state: "ready", self: getIdentity() });
   }, []);
 
   const self = hydration.state === "ready" ? hydration.self : null;
+
+  // Ask for notification permission once after sign-in.
+  useEffect(() => {
+    if (!self) return;
+    void ensureNotificationPermission();
+  }, [self]);
 
   const askedAvatarRef = useRef<Set<string>>(new Set());
   const askedGroupRef = useRef<Set<string>>(new Set());
@@ -67,6 +82,23 @@ export function DemoApp() {
           attachment,
         };
         void db.messages.put(local);
+
+        // Notify + chime when this device isn't actively viewing the chat.
+        const isGroup = isGroupId(wire.conversationId);
+        const groupForTitle = isGroup
+          ? await db.groups.get(wire.conversationId)
+          : undefined;
+        const title = isGroup
+          ? `${groupForTitle?.name ?? "Group"} — ${wire.senderId}`
+          : wire.senderId;
+        const body = wire.body
+          || (wire.attachment
+            ? wire.attachment.type.startsWith("image/")
+              ? "📷 Photo"
+              : `📎 ${wire.attachment.name}`
+            : "New message");
+        notify(title, { body, tag: wire.conversationId });
+        playMessageTone();
 
         const sender = event.from;
 
@@ -253,6 +285,10 @@ export function DemoApp() {
 
   const inChatDetail = tab === "chats" && target !== null;
 
+  // Reset to messages whenever the target changes (so opening a new chat
+  // doesn't jump to the previous chat's profile).
+  // We rely on setTarget callers to also setChatSubView("messages").
+
   return (
     <CallProvider self={self}>
       <div className="md:grid md:h-svh md:grid-cols-[320px_1fr]">
@@ -267,7 +303,10 @@ export function DemoApp() {
               <ConversationsList
                 self={self}
                 selectedTarget={target}
-                onSelect={(t) => setTarget(t)}
+                onSelect={(t) => {
+                  setTarget(t);
+                  setChatSubView("messages");
+                }}
                 onCreateGroup={createGroup}
                 onSendBroadcast={sendBroadcast}
               />
@@ -277,6 +316,7 @@ export function DemoApp() {
                 onOpenChat={(peer) => {
                   setTab("chats");
                   setTarget(peer);
+                  setChatSubView("messages");
                 }}
               />
             )}
@@ -296,7 +336,10 @@ export function DemoApp() {
             active={tab}
             onChange={(next) => {
               setTab(next);
-              if (next !== "chats") setTarget(null);
+              if (next !== "chats") {
+                setTarget(null);
+                setChatSubView("messages");
+              }
             }}
           />
         </aside>
@@ -307,17 +350,31 @@ export function DemoApp() {
           )}
         >
           {inChatDetail && target ? (
-            isGroupId(target) ? (
+            chatSubView === "profile" ? (
+              <ChatProfile
+                self={self}
+                target={target}
+                onBack={() => setChatSubView("messages")}
+              />
+            ) : isGroupId(target) ? (
               <GroupChat
                 self={self}
                 groupId={target}
-                onBack={() => setTarget(null)}
+                onBack={() => {
+                  setTarget(null);
+                  setChatSubView("messages");
+                }}
+                onOpenProfile={() => setChatSubView("profile")}
               />
             ) : (
               <Chat
                 self={self}
                 peer={target}
-                onBack={() => setTarget(null)}
+                onBack={() => {
+                  setTarget(null);
+                  setChatSubView("messages");
+                }}
+                onOpenProfile={() => setChatSubView("profile")}
               />
             )
           ) : (

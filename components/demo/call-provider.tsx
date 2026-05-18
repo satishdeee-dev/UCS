@@ -53,6 +53,7 @@ export function useCall() {
 }
 
 import { db } from "@/lib/db";
+import { notify, startRingtone, stopRingtone } from "@/lib/demo/notifications";
 import { emit, listen, type BusEvent } from "@/lib/demo/transport";
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -245,6 +246,7 @@ export function CallProvider({
   const accept = useCallback(async () => {
     const current = stateRef.current;
     if (current.phase !== "incoming" || !self) return;
+    stopRingtone();
 
     try {
       const pc = setupPeerConnection(current.peer, current.callId);
@@ -290,6 +292,7 @@ export function CallProvider({
   const decline = useCallback(() => {
     const current = stateRef.current;
     if (current.phase !== "incoming" || !self) return;
+    stopRingtone();
     sendSignal({
       kind: "call-end",
       from: self,
@@ -367,6 +370,12 @@ export function CallProvider({
           return;
         }
         beginRecord(msg.from, msg.mediaKind, "incoming");
+        startRingtone();
+        notify(`Incoming ${msg.mediaKind} call`, {
+          body: msg.from,
+          tag: `call-${msg.callId}`,
+          whenFocused: false,
+        });
         setState({
           phase: "incoming",
           peer: msg.from,
@@ -420,6 +429,7 @@ export function CallProvider({
 
       if (msg.kind === "call-end") {
         if (current.phase === "idle" || current.callId !== msg.callId) return;
+        stopRingtone();
         await persistRecord();
         cleanup();
         setState({ phase: "idle" });
@@ -431,6 +441,7 @@ export function CallProvider({
   // Stop everything if the user signs out.
   useEffect(() => {
     if (self === null && stateRef.current.phase !== "idle") {
+      stopRingtone();
       cleanup();
       setState({ phase: "idle" });
     }

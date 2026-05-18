@@ -8,6 +8,7 @@ import { db, type LocalMessage, type LocalVoiceNote } from "@/lib/db";
 import { blobToBase64 } from "@/lib/demo/encoding";
 import { emit } from "@/lib/demo/transport";
 import { transcribe, warmTranscriber } from "@/lib/ai/transcribe";
+import { getWallpaperStyle, useWallpaper } from "@/lib/demo/wallpapers";
 import { Avatar } from "./avatar";
 import { Composer } from "./composer";
 import { MessageBubble } from "./message-bubble";
@@ -16,13 +17,14 @@ interface Props {
   self: string;
   groupId: string;
   onBack: () => void;
+  onOpenProfile: () => void;
 }
 
 type Item =
   | { kind: "text"; data: LocalMessage }
   | { kind: "voice"; data: LocalVoiceNote };
 
-export function GroupChat({ self, groupId, onBack }: Props) {
+export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
   const group = useLiveQuery(() => db.groups.get(groupId), [groupId]);
 
   const items = useLiveQuery<Item[]>(async () => {
@@ -146,6 +148,8 @@ export function GroupChat({ self, groupId, onBack }: Props) {
     // Realtime would balloon payloads; needs Storage to fan out cheaply).
   }
 
+  const wallpaperId = useWallpaper(groupId);
+
   return (
     <main className="flex h-full min-h-svh w-full flex-1 flex-col bg-background">
       <header className="flex items-center gap-2 border-b bg-card px-3 py-3">
@@ -158,27 +162,29 @@ export function GroupChat({ self, groupId, onBack }: Props) {
         >
           <ArrowLeft className="size-4" />
         </Button>
-        <div className="flex size-9 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/70 dark:text-indigo-200">
-          <Users className="size-4" />
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-semibold">
-            {group?.name ?? "Group"}
-          </span>
-          <span className="truncate text-[10px] text-zinc-500">
-            {group ? `${group.members.length} members` : ""}
-          </span>
-        </div>
+        <button
+          type="button"
+          onClick={onOpenProfile}
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-0.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
+        >
+          <div className="flex size-9 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/70 dark:text-indigo-200">
+            <Users className="size-4" />
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-sm font-semibold">
+              {group?.name ?? "Group"}
+            </span>
+            <span className="truncate text-[10px] text-zinc-500">
+              {group ? `${group.members.length} members · tap for info` : ""}
+            </span>
+          </div>
+        </button>
       </header>
 
       <div
         ref={scrollRef}
-        className="flex flex-1 flex-col gap-2 overflow-y-auto bg-zinc-50 px-3 py-4 dark:bg-zinc-950"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 1px 1px, rgba(99,102,241,0.10) 1px, transparent 0)",
-          backgroundSize: "22px 22px",
-        }}
+        className="flex flex-1 flex-col gap-2 overflow-y-auto px-3 py-4"
+        style={getWallpaperStyle(wallpaperId)}
       >
         {items && items.length === 0 && (
           <p className="my-auto text-center text-sm text-zinc-500">
