@@ -54,6 +54,7 @@ export function useCall() {
 
 import { db } from "@/lib/db";
 import { notify, startRingtone, stopRingtone } from "@/lib/demo/notifications";
+import { sendPush } from "@/lib/demo/push";
 import { emit, listen, type BusEvent } from "@/lib/demo/transport";
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -232,6 +233,12 @@ export function CallProvider({
           callId,
           mediaKind: kind,
           sdp: offer.sdp ?? "",
+        });
+        sendPush({
+          to: [peer],
+          title: `Incoming ${kind} call`,
+          body: self,
+          tag: `call-${callId}`,
         });
       } catch (err) {
         console.error("call() failed", err);

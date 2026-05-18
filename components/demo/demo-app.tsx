@@ -18,6 +18,7 @@ import {
   notify,
   playMessageTone,
 } from "@/lib/demo/notifications";
+import { registerPushSubscription, sendPush } from "@/lib/demo/push";
 import { AnimatedBackground } from "./animated-background";
 import { BottomBar, type Tab } from "./bottom-bar";
 import { CallProvider } from "./call-provider";
@@ -47,10 +48,15 @@ export function DemoApp() {
 
   const self = hydration.state === "ready" ? hydration.self : null;
 
-  // Ask for notification permission once after sign-in.
+  // Ask for notification permission and register the service worker for
+  // Web Push once we have an identity.
   useEffect(() => {
     if (!self) return;
-    void ensureNotificationPermission();
+    (async () => {
+      const granted = await ensureNotificationPermission();
+      if (!granted) return;
+      await registerPushSubscription(self);
+    })();
   }, [self]);
 
   const askedAvatarRef = useRef<Set<string>>(new Set());
@@ -232,8 +238,10 @@ export function DemoApp() {
     async (recipients: string[], body: string) => {
       if (!self) return;
       const now = Date.now();
+      const targets: string[] = [];
       for (const peer of recipients) {
         if (peer === self) continue;
+        targets.push(peer);
         const message: LocalMessage = {
           id: crypto.randomUUID(),
           conversationId: conversationIdFor(self, peer),
@@ -257,6 +265,12 @@ export function DemoApp() {
           },
         });
       }
+      sendPush({
+        to: targets,
+        title: self,
+        body,
+        tag: `broadcast-${now}`,
+      });
     },
     [self],
   );

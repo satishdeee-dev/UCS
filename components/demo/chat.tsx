@@ -8,6 +8,7 @@ import { db, type LocalMessage, type LocalVoiceNote } from "@/lib/db";
 import { conversationIdFor } from "@/lib/demo/conversations";
 import { transcribe, warmTranscriber } from "@/lib/ai/transcribe";
 import { blobToBase64 } from "@/lib/demo/encoding";
+import { sendPush } from "@/lib/demo/push";
 import { emit } from "@/lib/demo/transport";
 import { getWallpaperStyle, useWallpaper } from "@/lib/demo/wallpapers";
 import { Avatar } from "./avatar";
@@ -82,6 +83,13 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
         syncedAt: message.syncedAt,
       },
     });
+    sendPush({
+      to: [peer],
+      title: self,
+      body,
+      conversationId,
+      tag: conversationId,
+    });
   }
 
   async function sendAttachment(file: File) {
@@ -120,6 +128,13 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
           size: file.size,
         },
       },
+    });
+    sendPush({
+      to: [peer],
+      title: self,
+      body: file.type.startsWith("image/") ? "📷 Photo" : `📎 ${file.name}`,
+      conversationId,
+      tag: conversationId,
     });
   }
 

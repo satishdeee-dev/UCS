@@ -6,6 +6,7 @@ import { ArrowLeft, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { db, type LocalMessage, type LocalVoiceNote } from "@/lib/db";
 import { blobToBase64 } from "@/lib/demo/encoding";
+import { sendPush } from "@/lib/demo/push";
 import { emit } from "@/lib/demo/transport";
 import { transcribe, warmTranscriber } from "@/lib/ai/transcribe";
 import { getWallpaperStyle, useWallpaper } from "@/lib/demo/wallpapers";
@@ -82,6 +83,13 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
         },
       });
     }
+    sendPush({
+      to: recipients,
+      title: `${group?.name ?? "Group"} — ${self}`,
+      body,
+      conversationId: groupId,
+      tag: groupId,
+    });
   }
 
   async function sendAttachment(file: File) {
@@ -122,6 +130,13 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
         },
       });
     }
+    sendPush({
+      to: recipients,
+      title: `${group?.name ?? "Group"} — ${self}`,
+      body: file.type.startsWith("image/") ? "📷 Photo" : `📎 ${file.name}`,
+      conversationId: groupId,
+      tag: groupId,
+    });
   }
 
   async function sendVoice(blob: Blob, durationMs: number) {
