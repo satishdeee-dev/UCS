@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { db, type LocalAttachment, type LocalMessage } from "@/lib/db";
+import {
+  db,
+  isGroupId,
+  type LocalAttachment,
+  type LocalGroup,
+  type LocalMessage,
+} from "@/lib/db";
 import { clearIdentity, getIdentity } from "@/lib/demo/identity";
 import { base64ToBlob, blobToBase64 } from "@/lib/demo/encoding";
 import { emit, listen } from "@/lib/demo/transport";
@@ -12,12 +18,17 @@ import { CallOverlay } from "./call-overlay";
 import { LoginFlow } from "./login-flow";
 import { ConversationsList } from "./conversations-list";
 import { Chat } from "./chat";
+import { GroupChat } from "./group-chat";
 import { Settings } from "./settings";
 import { Logo } from "./logo";
+import { conversationIdFor } from "@/lib/demo/conversations";
 
 type Hydration = { state: "loading" } | { state: "ready"; self: string | null };
 
-type View = { type: "chats" } | { type: "chat"; peer: string } | { type: "settings" };
+type View =
+  | { type: "chats" }
+  | { type: "chat"; target: string } // peer phone OR group id
+  | { type: "settings" };
 
 export function DemoApp() {
   const [hydration, setHydration] = useState<Hydration>({ state: "loading" });
@@ -29,8 +40,8 @@ export function DemoApp() {
 
   const self = hydration.state === "ready" ? hydration.self : null;
 
-  // Track which peers we've already asked for an avatar so we don't spam.
-  const askedRef = useRef<Set<string>>(new Set());
+  const askedAvatarRef = useRef<Set<string>>(new Set());
+  const askedGroupRef = useRef<Set<string>>(new Set());
 
   // Inbound events from peers (cross-device, via Supabase Realtime).
   useEffect(() => {
@@ -39,6 +50,7 @@ export function DemoApp() {
       if (event.kind === "message") {
         if (event.to !== self) return;
         const wire = event.message;
+
         let attachment: LocalAttachment | undefined;
         if (wire.attachment) {
           attachment = {
@@ -59,13 +71,29 @@ export function DemoApp() {
         };
         void db.messages.put(local);
 
-        // First time we hear from this peer and don't have their photo? Ask.
-        const peer = event.from;
-        if (!askedRef.current.has(peer)) {
-          const existing = await db.users.get(peer);
+        const sender = event.from;
+
+        // Ask for avatar if we don't have one yet.
+        if (!askedAvatarRef.current.has(sender)) {
+          const existing = await db.users.get(sender);
           if (!existing?.avatarBlob) {
-            askedRef.current.add(peer);
-            void emit({ kind: "avatar-request", from: self, to: peer });
+            askedAvatarRef.current.add(sender);
+            void emit({ kind: "avatar-request", from: self, to: sender });
+          }
+        }
+
+        // Group message for a group we don't know about? Ask the sender.
+        if (isGroupId(wire.conversationId)) {
+          const groupId = wire.conversationId;
+          const existing = await db.groups.get(groupId);
+          if (!existing && !askedGroupRef.current.has(groupId)) {
+            askedGroupRef.current.add(groupId);
+            void emit({
+              kind: "group-request",
+              from: self,
+              to: sender,
+              groupId,
+            });
           }
         }
         return;
@@ -102,11 +130,43 @@ export function DemoApp() {
         });
         return;
       }
+
+      if (event.kind === "group-created") {
+        const g = event.group;
+        if (!g.members.includes(self)) return; // not for us
+        const local: LocalGroup = {
+          id: g.id,
+          name: g.name,
+          members: g.members,
+          createdBy: g.createdBy,
+          createdAt: g.createdAt,
+        };
+        await db.groups.put(local);
+        return;
+      }
+
+      if (event.kind === "group-request") {
+        if (event.to !== self) return;
+        const g = await db.groups.get(event.groupId);
+        if (!g) return;
+        if (!g.members.includes(event.from)) return; // requester isn't a member
+        void emit({
+          kind: "group-created",
+          from: self,
+          group: {
+            id: g.id,
+            name: g.name,
+            members: g.members,
+            createdBy: g.createdBy,
+            createdAt: g.createdAt,
+          },
+        });
+        return;
+      }
     });
   }, [self]);
 
-  // Announce our avatar (if any) when we sign in, so already-online peers
-  // can pick it up without having to ping us first.
+  // Announce our avatar (if any) when we sign in.
   useEffect(() => {
     if (!self) return;
     let cancelled = false;
@@ -124,6 +184,61 @@ export function DemoApp() {
       cancelled = true;
     };
   }, [self]);
+
+  const createGroup = useCallback(
+    async (name: string, members: string[]) => {
+      if (!self) return;
+      const id = `group:${crypto.randomUUID()}`;
+      const group: LocalGroup = {
+        id,
+        name,
+        members,
+        createdBy: self,
+        createdAt: Date.now(),
+      };
+      await db.groups.put(group);
+      // Broadcast to each member except self.
+      for (const m of members) {
+        if (m === self) continue;
+        void emit({ kind: "group-created", from: self, group });
+      }
+      setView({ type: "chat", target: id });
+    },
+    [self],
+  );
+
+  const sendBroadcast = useCallback(
+    async (recipients: string[], body: string) => {
+      if (!self) return;
+      const now = Date.now();
+      for (const peer of recipients) {
+        if (peer === self) continue;
+        const message: LocalMessage = {
+          id: crypto.randomUUID(),
+          conversationId: conversationIdFor(self, peer),
+          senderId: self,
+          body,
+          createdAt: now,
+          syncedAt: null,
+        };
+        await db.messages.add(message);
+        void emit({
+          kind: "message",
+          from: self,
+          to: peer,
+          message: {
+            id: message.id,
+            conversationId: message.conversationId,
+            senderId: message.senderId,
+            body: message.body,
+            createdAt: message.createdAt,
+            syncedAt: message.syncedAt,
+          },
+        });
+      }
+    },
+    [self],
+  );
 
   if (hydration.state === "loading") {
     return (
@@ -160,9 +275,11 @@ export function DemoApp() {
         >
           <ConversationsList
             self={self}
-            selectedPeer={view.type === "chat" ? view.peer : null}
-            onSelect={(peer) => setView({ type: "chat", peer })}
+            selectedTarget={view.type === "chat" ? view.target : null}
+            onSelect={(target) => setView({ type: "chat", target })}
             onOpenSettings={() => setView({ type: "settings" })}
+            onCreateGroup={createGroup}
+            onSendBroadcast={sendBroadcast}
           />
         </aside>
         <section
@@ -172,11 +289,19 @@ export function DemoApp() {
           )}
         >
           {view.type === "chat" ? (
-            <Chat
-              self={self}
-              peer={view.peer}
-              onBack={() => setView({ type: "chats" })}
-            />
+            isGroupId(view.target) ? (
+              <GroupChat
+                self={self}
+                groupId={view.target}
+                onBack={() => setView({ type: "chats" })}
+              />
+            ) : (
+              <Chat
+                self={self}
+                peer={view.target}
+                onBack={() => setView({ type: "chats" })}
+              />
+            )
           ) : view.type === "settings" ? (
             <Settings
               self={self}

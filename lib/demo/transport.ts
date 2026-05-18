@@ -70,7 +70,19 @@ export type BusEvent =
       reason: "declined" | "ended" | "busy";
     }
   | { kind: "avatar"; from: string; avatar: WireAvatar | null }
-  | { kind: "avatar-request"; from: string; to: string };
+  | { kind: "avatar-request"; from: string; to: string }
+  | {
+      kind: "group-created";
+      from: string;
+      group: {
+        id: string;
+        name: string;
+        members: string[];
+        createdBy: string;
+        createdAt: number;
+      };
+    }
+  | { kind: "group-request"; from: string; to: string; groupId: string };
 
 type Handler = (event: BusEvent) => void;
 

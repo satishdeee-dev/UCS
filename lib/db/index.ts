@@ -61,12 +61,25 @@ export interface LocalVector {
   createdAt: number;
 }
 
+export interface LocalGroup {
+  id: string;        // "group:<uuid>"
+  name: string;
+  members: string[]; // phone numbers (always includes the creator)
+  createdBy: string;
+  createdAt: number;
+}
+
+export function isGroupId(id: string): boolean {
+  return id.startsWith("group:");
+}
+
 class UcsDb extends Dexie {
   messages!: Table<LocalMessage, string>;
   voiceNotes!: Table<LocalVoiceNote, string>;
   users!: Table<LocalUser, string>;
   syncQueue!: Table<SyncQueueItem, number>;
   vectors!: Table<LocalVector, string>;
+  groups!: Table<LocalGroup, string>;
 
   constructor() {
     super("ucs");
@@ -76,6 +89,9 @@ class UcsDb extends Dexie {
       users: "id, email, lastSeenAt",
       syncQueue: "++id, entityType, entityId, createdAt",
       vectors: "id, kind, createdAt",
+    });
+    this.version(2).stores({
+      groups: "id, createdAt",
     });
   }
 }

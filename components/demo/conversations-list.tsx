@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Settings as SettingsIcon } from "lucide-react";
+import { Megaphone, Plus, Settings as SettingsIcon, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { db } from "@/lib/db";
@@ -10,63 +10,122 @@ import { conversationIncludes, getPeer } from "@/lib/demo/conversations";
 import { normalizePhone } from "@/lib/demo/identity";
 import { Avatar } from "./avatar";
 import { Logo } from "./logo";
+import { NewGroupDialog } from "./new-group-dialog";
+import { NewBroadcastDialog } from "./new-broadcast-dialog";
 
 interface Props {
   self: string;
-  selectedPeer: string | null;
-  onSelect: (peer: string) => void;
+  selectedTarget: string | null; // peer phone OR groupId
+  onSelect: (target: string) => void;
   onOpenSettings: () => void;
+  onCreateGroup: (name: string, members: string[]) => Promise<void>;
+  onSendBroadcast: (recipients: string[], body: string) => Promise<void>;
 }
+
+type ListEntry = {
+  id: string; // peer phone or groupId
+  kind: "direct" | "group";
+  name: string; // peer phone or group name
+  preview: string;
+  createdAt: number;
+};
 
 export function ConversationsList({
   self,
-  selectedPeer,
+  selectedTarget,
   onSelect,
   onOpenSettings,
+  onCreateGroup,
+  onSendBroadcast,
 }: Props) {
-  const [showNew, setShowNew] = useState(false);
+  const [showNewChat, setShowNewChat] = useState(false);
   const [newPeer, setNewPeer] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [showGroupDialog, setShowGroupDialog] = useState(false);
+  const [showBroadcastDialog, setShowBroadcastDialog] = useState(false);
 
-  const conversations = useLiveQuery(async () => {
-    const [msgs, vns] = await Promise.all([
+  const entries = useLiveQuery(async () => {
+    const [msgs, vns, groups] = await Promise.all([
       db.messages.toArray(),
       db.voiceNotes.toArray(),
+      db.groups.toArray(),
     ]);
-    const grouped = new Map<
-      string,
-      { cid: string; createdAt: number; preview: string }
-    >();
+
+    const map = new Map<string, ListEntry>();
+
+    // Direct conversations: derived from messages (any conversationId with "phone:phone" shape)
     for (const m of msgs) {
-      if (!conversationIncludes(m.conversationId, self)) continue;
-      const ex = grouped.get(m.conversationId);
+      const cid = m.conversationId;
+      if (cid.startsWith("group:")) continue;
+      if (!conversationIncludes(cid, self)) continue;
+      const peer = getPeer(cid, self);
+      if (!peer) continue;
+      const preview = m.attachment
+        ? m.attachment.type.startsWith("image/")
+          ? "📷 Photo"
+          : `📎 ${m.attachment.name}`
+        : m.body;
+      const ex = map.get(peer);
       if (!ex || m.createdAt > ex.createdAt) {
-        const preview = m.attachment
-          ? m.attachment.type.startsWith("image/")
-            ? "📷 Photo"
-            : `📎 ${m.attachment.name}`
-          : m.body;
-        grouped.set(m.conversationId, {
-          cid: m.conversationId,
-          createdAt: m.createdAt,
+        map.set(peer, {
+          id: peer,
+          kind: "direct",
+          name: peer,
           preview,
+          createdAt: m.createdAt,
         });
       }
     }
     for (const v of vns) {
-      if (!conversationIncludes(v.conversationId, self)) continue;
-      const ex = grouped.get(v.conversationId);
+      const cid = v.conversationId;
+      if (cid.startsWith("group:")) continue;
+      if (!conversationIncludes(cid, self)) continue;
+      const peer = getPeer(cid, self);
+      if (!peer) continue;
+      const ex = map.get(peer);
       if (!ex || v.createdAt > ex.createdAt) {
-        grouped.set(v.conversationId, {
-          cid: v.conversationId,
-          createdAt: v.createdAt,
+        map.set(peer, {
+          id: peer,
+          kind: "direct",
+          name: peer,
           preview: "🎤 Voice note",
+          createdAt: v.createdAt,
         });
       }
     }
-    return Array.from(grouped.values()).sort(
-      (a, b) => b.createdAt - a.createdAt,
-    );
+
+    // Groups: every group you're a member of shows up, even before any message
+    for (const g of groups) {
+      if (!g.members.includes(self)) continue;
+      const groupMsgs = msgs.filter((m) => m.conversationId === g.id);
+      const groupVns = vns.filter((v) => v.conversationId === g.id);
+      const last = [...groupMsgs, ...groupVns].sort(
+        (a, b) => b.createdAt - a.createdAt,
+      )[0];
+      let preview = `${g.members.length} members`;
+      let createdAt = g.createdAt;
+      if (last) {
+        createdAt = last.createdAt;
+        if ("body" in last) {
+          preview = last.attachment
+            ? last.attachment.type.startsWith("image/")
+              ? "📷 Photo"
+              : `📎 ${last.attachment.name}`
+            : `${last.senderId === self ? "You" : last.senderId}: ${last.body}`;
+        } else {
+          preview = `${last.senderId === self ? "You" : last.senderId}: 🎤 Voice note`;
+        }
+      }
+      map.set(g.id, {
+        id: g.id,
+        kind: "group",
+        name: g.name,
+        preview,
+        createdAt,
+      });
+    }
+
+    return Array.from(map.values()).sort((a, b) => b.createdAt - a.createdAt);
   }, [self]);
 
   function startNew() {
@@ -81,7 +140,7 @@ export function ConversationsList({
     }
     setError(null);
     onSelect(normalized);
-    setShowNew(false);
+    setShowNewChat(false);
     setNewPeer("");
   }
 
@@ -106,7 +165,7 @@ export function ConversationsList({
       </header>
 
       <div className="flex flex-col gap-2 border-b bg-card px-3 py-3">
-        {showNew ? (
+        {showNewChat ? (
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
               <Input
@@ -121,7 +180,7 @@ export function ConversationsList({
               <Button
                 variant="ghost"
                 onClick={() => {
-                  setShowNew(false);
+                  setShowNewChat(false);
                   setError(null);
                   setNewPeer("");
                 }}
@@ -132,39 +191,63 @@ export function ConversationsList({
             {error && <p className="text-xs text-red-500">{error}</p>}
           </div>
         ) : (
-          <Button
-            onClick={() => setShowNew(true)}
-            variant="outline"
-            className="self-start"
-            size="sm"
-          >
-            <Plus className="size-4" /> New chat
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => setShowNewChat(true)}
+              variant="outline"
+              size="sm"
+            >
+              <Plus className="size-4" /> New chat
+            </Button>
+            <Button
+              onClick={() => setShowGroupDialog(true)}
+              variant="outline"
+              size="sm"
+            >
+              <Users className="size-4" /> New group
+            </Button>
+            <Button
+              onClick={() => setShowBroadcastDialog(true)}
+              variant="outline"
+              size="sm"
+            >
+              <Megaphone className="size-4" /> Broadcast
+            </Button>
+          </div>
         )}
       </div>
 
       <ul className="flex flex-1 flex-col overflow-y-auto">
-        {conversations && conversations.length === 0 && (
+        {entries && entries.length === 0 && (
           <li className="px-4 py-12 text-center text-sm text-zinc-500">
-            No conversations yet. Tap{" "}
-            <span className="font-medium">New chat</span> to start one.
+            No conversations yet. Tap <span className="font-medium">New chat</span>{" "}
+            or <span className="font-medium">New group</span> to start one.
           </li>
         )}
-        {conversations?.map((c) => {
-          const peer = getPeer(c.cid, self);
-          const time = new Date(c.createdAt).toLocaleString();
-          const isActive = selectedPeer === peer;
+        {entries?.map((entry) => {
+          const isActive = selectedTarget === entry.id;
+          const time = new Date(entry.createdAt).toLocaleString();
           return (
-            <li key={c.cid}>
+            <li key={entry.id}>
               <button
-                onClick={() => onSelect(peer)}
+                onClick={() => onSelect(entry.id)}
                 className={`flex w-full items-center gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30 ${isActive ? "bg-indigo-50 dark:bg-indigo-950/40" : ""}`}
               >
-                <Avatar phone={peer} size={40} />
+                {entry.kind === "direct" ? (
+                  <Avatar phone={entry.id} size={40} />
+                ) : (
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/70 dark:text-indigo-200">
+                    <Users className="size-5" />
+                  </div>
+                )}
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="font-mono text-sm">{peer}</span>
+                  <span
+                    className={`${entry.kind === "direct" ? "font-mono" : "font-medium"} truncate text-sm`}
+                  >
+                    {entry.name}
+                  </span>
                   <span className="truncate text-xs text-zinc-500">
-                    {c.preview}
+                    {entry.preview}
                   </span>
                 </div>
                 <span className="shrink-0 text-xs text-zinc-400">{time}</span>
@@ -173,6 +256,27 @@ export function ConversationsList({
           );
         })}
       </ul>
+
+      {showGroupDialog && (
+        <NewGroupDialog
+          self={self}
+          onCancel={() => setShowGroupDialog(false)}
+          onCreate={async (name, members) => {
+            await onCreateGroup(name, members);
+            setShowGroupDialog(false);
+          }}
+        />
+      )}
+      {showBroadcastDialog && (
+        <NewBroadcastDialog
+          self={self}
+          onCancel={() => setShowBroadcastDialog(false)}
+          onSend={async (recipients, body) => {
+            await onSendBroadcast(recipients, body);
+            setShowBroadcastDialog(false);
+          }}
+        />
+      )}
     </main>
   );
 }

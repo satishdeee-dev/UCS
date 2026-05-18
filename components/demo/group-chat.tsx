@@ -2,21 +2,19 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowLeft, Phone, Video } from "lucide-react";
+import { ArrowLeft, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { db, type LocalMessage, type LocalVoiceNote } from "@/lib/db";
-import { conversationIdFor } from "@/lib/demo/conversations";
-import { transcribe, warmTranscriber } from "@/lib/ai/transcribe";
 import { blobToBase64 } from "@/lib/demo/encoding";
 import { emit } from "@/lib/demo/transport";
+import { transcribe, warmTranscriber } from "@/lib/ai/transcribe";
 import { Avatar } from "./avatar";
-import { useCall } from "./call-provider";
 import { Composer } from "./composer";
 import { MessageBubble } from "./message-bubble";
 
 interface Props {
   self: string;
-  peer: string;
+  groupId: string;
   onBack: () => void;
 }
 
@@ -24,16 +22,13 @@ type Item =
   | { kind: "text"; data: LocalMessage }
   | { kind: "voice"; data: LocalVoiceNote };
 
-export function Chat({ self, peer, onBack }: Props) {
-  const conversationId = useMemo(
-    () => conversationIdFor(self, peer),
-    [self, peer],
-  );
+export function GroupChat({ self, groupId, onBack }: Props) {
+  const group = useLiveQuery(() => db.groups.get(groupId), [groupId]);
 
   const items = useLiveQuery<Item[]>(async () => {
     const [msgs, vns] = await Promise.all([
-      db.messages.where("conversationId").equals(conversationId).toArray(),
-      db.voiceNotes.where("conversationId").equals(conversationId).toArray(),
+      db.messages.where("conversationId").equals(groupId).toArray(),
+      db.voiceNotes.where("conversationId").equals(groupId).toArray(),
     ]);
     const merged: Item[] = [
       ...msgs.map<Item>((m) => ({ kind: "text", data: m })),
@@ -41,7 +36,7 @@ export function Chat({ self, peer, onBack }: Props) {
     ];
     merged.sort((a, b) => a.data.createdAt - b.data.createdAt);
     return merged;
-  }, [conversationId]);
+  }, [groupId]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -51,41 +46,46 @@ export function Chat({ self, peer, onBack }: Props) {
     });
   }, [items?.length]);
 
-  // Warm up the transcription model in the background so voice notes
-  // get transcribed promptly.
   useEffect(() => {
     void warmTranscriber().catch(() => {});
   }, []);
 
+  const recipients = useMemo(
+    () => (group?.members ?? []).filter((m) => m !== self),
+    [group, self],
+  );
+
   async function sendText(body: string) {
     const message: LocalMessage = {
       id: crypto.randomUUID(),
-      conversationId,
+      conversationId: groupId,
       senderId: self,
       body,
       createdAt: Date.now(),
       syncedAt: null,
     };
     await db.messages.add(message);
-    void emit({
-      kind: "message",
-      from: self,
-      to: peer,
-      message: {
-        id: message.id,
-        conversationId: message.conversationId,
-        senderId: message.senderId,
-        body: message.body,
-        createdAt: message.createdAt,
-        syncedAt: message.syncedAt,
-      },
-    });
+    for (const to of recipients) {
+      void emit({
+        kind: "message",
+        from: self,
+        to,
+        message: {
+          id: message.id,
+          conversationId: message.conversationId,
+          senderId: message.senderId,
+          body: message.body,
+          createdAt: message.createdAt,
+          syncedAt: message.syncedAt,
+        },
+      });
+    }
   }
 
   async function sendAttachment(file: File) {
     const message: LocalMessage = {
       id: crypto.randomUUID(),
-      conversationId,
+      conversationId: groupId,
       senderId: self,
       body: "",
       createdAt: Date.now(),
@@ -98,34 +98,35 @@ export function Chat({ self, peer, onBack }: Props) {
       },
     };
     await db.messages.add(message);
-
     const base64 = await blobToBase64(file);
-    void emit({
-      kind: "message",
-      from: self,
-      to: peer,
-      message: {
-        id: message.id,
-        conversationId: message.conversationId,
-        senderId: message.senderId,
-        body: message.body,
-        createdAt: message.createdAt,
-        syncedAt: message.syncedAt,
-        attachment: {
-          base64,
-          name: file.name,
-          type: file.type || "application/octet-stream",
-          size: file.size,
+    for (const to of recipients) {
+      void emit({
+        kind: "message",
+        from: self,
+        to,
+        message: {
+          id: message.id,
+          conversationId: message.conversationId,
+          senderId: message.senderId,
+          body: message.body,
+          createdAt: message.createdAt,
+          syncedAt: message.syncedAt,
+          attachment: {
+            base64,
+            name: file.name,
+            type: file.type || "application/octet-stream",
+            size: file.size,
+          },
         },
-      },
-    });
+      });
+    }
   }
 
   async function sendVoice(blob: Blob, durationMs: number) {
     const id = crypto.randomUUID();
     await db.voiceNotes.add({
       id,
-      conversationId,
+      conversationId: groupId,
       senderId: self,
       audioBlob: blob,
       transcript: null,
@@ -134,7 +135,6 @@ export function Chat({ self, peer, onBack }: Props) {
       syncedAt: null,
       remoteUrl: null,
     });
-
     try {
       const text = await transcribe(blob);
       await db.voiceNotes.update(id, { transcript: text });
@@ -142,10 +142,9 @@ export function Chat({ self, peer, onBack }: Props) {
       console.error("Transcription failed", err);
       await db.voiceNotes.update(id, { transcript: "" });
     }
+    // Voice notes in groups: local-only for now (Blob over per-recipient
+    // Realtime would balloon payloads; needs Storage to fan out cheaply).
   }
-
-  const { call, state: callState } = useCall();
-  const callInFlight = callState.phase !== "idle";
 
   return (
     <main className="flex h-full min-h-svh w-full flex-1 flex-col bg-background">
@@ -159,29 +158,17 @@ export function Chat({ self, peer, onBack }: Props) {
         >
           <ArrowLeft className="size-4" />
         </Button>
-        <Avatar phone={peer} size={36} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate font-mono text-sm">{peer}</span>
-          <span className="text-[10px] text-zinc-500">offline-first</span>
+        <div className="flex size-9 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/70 dark:text-indigo-200">
+          <Users className="size-4" />
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => call(peer, "video")}
-          disabled={callInFlight}
-          aria-label="Video call"
-        >
-          <Video className="size-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => call(peer, "audio")}
-          disabled={callInFlight}
-          aria-label="Voice call"
-        >
-          <Phone className="size-4" />
-        </Button>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-sm font-semibold">
+            {group?.name ?? "Group"}
+          </span>
+          <span className="truncate text-[10px] text-zinc-500">
+            {group ? `${group.members.length} members` : ""}
+          </span>
+        </div>
       </header>
 
       <div
@@ -195,31 +182,43 @@ export function Chat({ self, peer, onBack }: Props) {
       >
         {items && items.length === 0 && (
           <p className="my-auto text-center text-sm text-zinc-500">
-            No messages yet. Say hi.
+            No messages yet. Be the first to say hi.
           </p>
         )}
         {items?.map((item) => {
-          if (item.kind === "text") {
-            return (
-              <MessageBubble
-                key={`m-${item.data.id}`}
-                kind="text"
-                body={item.data.body}
-                attachment={item.data.attachment}
-                createdAt={item.data.createdAt}
-                outgoing={item.data.senderId === self}
-              />
-            );
-          }
+          const outgoing = item.data.senderId === self;
+          const senderLabel =
+            !outgoing && item.data.senderId !== self
+              ? item.data.senderId
+              : null;
           return (
-            <MessageBubble
-              key={`v-${item.data.id}`}
-              kind="voice"
-              audioBlob={item.data.audioBlob}
-              transcript={item.data.transcript}
-              createdAt={item.data.createdAt}
-              outgoing={item.data.senderId === self}
-            />
+            <div key={`${item.kind}-${item.data.id}`} className="flex flex-col gap-0.5">
+              {senderLabel && (
+                <div className="flex items-center gap-2 px-2">
+                  <Avatar phone={senderLabel} size={18} />
+                  <span className="font-mono text-[10px] text-zinc-500">
+                    {senderLabel}
+                  </span>
+                </div>
+              )}
+              {item.kind === "text" ? (
+                <MessageBubble
+                  kind="text"
+                  body={item.data.body}
+                  attachment={item.data.attachment}
+                  createdAt={item.data.createdAt}
+                  outgoing={outgoing}
+                />
+              ) : (
+                <MessageBubble
+                  kind="voice"
+                  audioBlob={item.data.audioBlob}
+                  transcript={item.data.transcript}
+                  createdAt={item.data.createdAt}
+                  outgoing={outgoing}
+                />
+              )}
+            </div>
           );
         })}
       </div>
