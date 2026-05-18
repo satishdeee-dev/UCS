@@ -18,7 +18,6 @@ import {
   notify,
   playMessageTone,
 } from "@/lib/demo/notifications";
-import { autoPlayVoiceNote, PTT_AUTOPLAY_WINDOW_MS } from "@/lib/demo/ptt";
 import { registerPushSubscription, sendPush } from "@/lib/demo/push";
 import { AnimatedBackground } from "./animated-background";
 import { BottomBar, type Tab } from "./bottom-bar";
@@ -210,14 +209,7 @@ export function DemoApp() {
           remoteUrl: null,
         });
 
-        // PTT bursts auto-play immediately (walkie-talkie behavior).
-        // Regular voice notes don't.
-        if (vn.isPtt && Date.now() - vn.createdAt < PTT_AUTOPLAY_WINDOW_MS) {
-          autoPlayVoiceNote(blob);
-        }
-
-        // Always surface a notification + chime for inbound voice notes
-        // (suppressed automatically when the tab is focused).
+        // Notification + chime when the tab isn't focused.
         const isGroup = isGroupId(vn.conversationId);
         const groupForTitle = isGroup
           ? await db.groups.get(vn.conversationId)
@@ -227,11 +219,11 @@ export function DemoApp() {
             ? `${groupForTitle?.name ?? "Group"} — ${vn.senderId}`
             : vn.senderId,
           {
-            body: vn.isPtt ? "📻 Push-to-talk" : "🎤 Voice note",
+            body: "🎤 Voice note",
             tag: vn.conversationId,
           },
         );
-        if (!vn.isPtt) playMessageTone();
+        playMessageTone();
         return;
       }
 

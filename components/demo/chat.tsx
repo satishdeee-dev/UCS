@@ -138,7 +138,7 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
     });
   }
 
-  async function sendVoice(blob: Blob, durationMs: number, isPtt = false) {
+  async function sendVoice(blob: Blob, durationMs: number) {
     const id = crypto.randomUUID();
     const createdAt = Date.now();
     await db.voiceNotes.add({
@@ -153,7 +153,7 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
       remoteUrl: null,
     });
 
-    // Send to peer immediately so PTT bursts are heard live.
+    // Send to peer so they see the voice note in the chat.
     const base64 = await blobToBase64(blob);
     void emit({
       kind: "voice-note",
@@ -168,13 +168,12 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
         durationMs,
         transcript: null,
         createdAt,
-        isPtt,
       },
     });
     sendPush({
       to: [peer],
       title: self,
-      body: isPtt ? "📻 Push-to-talk" : "🎤 Voice note",
+      body: "🎤 Voice note",
       conversationId,
       tag: conversationId,
     });

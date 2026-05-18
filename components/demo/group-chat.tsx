@@ -139,7 +139,7 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
     });
   }
 
-  async function sendVoice(blob: Blob, durationMs: number, isPtt = false) {
+  async function sendVoice(blob: Blob, durationMs: number) {
     const id = crypto.randomUUID();
     const createdAt = Date.now();
     await db.voiceNotes.add({
@@ -154,8 +154,8 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
       remoteUrl: null,
     });
 
-    // Broadcast to all members. Opus at 24kbps keeps PTT clips tiny
-    // (~3 KB/sec → ~30 KB for a typical 10s burst, fan-out safe).
+    // Broadcast to all members. Opus at 24kbps keeps clips tiny
+    // (~3 KB/sec → ~30 KB for a typical 10s clip, fan-out safe).
     const base64 = await blobToBase64(blob);
     for (const to of recipients) {
       void emit({
@@ -171,14 +171,13 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
           durationMs,
           transcript: null,
           createdAt,
-          isPtt,
         },
       });
     }
     sendPush({
       to: recipients,
       title: `${group?.name ?? "Group"} — ${self}`,
-      body: isPtt ? "📻 Push-to-talk" : "🎤 Voice note",
+      body: "🎤 Voice note",
       conversationId: groupId,
       tag: groupId,
     });

@@ -106,7 +106,6 @@ export interface WireVoiceNote {
   durationMs: number;
   transcript: string | null;
   createdAt: number;
-  isPtt: boolean;
 }
 
 type Handler = (event: BusEvent) => void;
