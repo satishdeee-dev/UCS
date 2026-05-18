@@ -82,7 +82,32 @@ export type BusEvent =
         createdAt: number;
       };
     }
-  | { kind: "group-request"; from: string; to: string; groupId: string };
+  | { kind: "group-request"; from: string; to: string; groupId: string }
+  | {
+      kind: "voice-note";
+      from: string;
+      to: string;
+      voiceNote: WireVoiceNote;
+    }
+  | {
+      kind: "voice-transcript";
+      from: string;
+      to: string;
+      voiceNoteId: string;
+      transcript: string;
+    };
+
+export interface WireVoiceNote {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  base64: string;
+  type: string;
+  durationMs: number;
+  transcript: string | null;
+  createdAt: number;
+  isPtt: boolean;
+}
 
 type Handler = (event: BusEvent) => void;
 

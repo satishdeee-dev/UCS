@@ -358,7 +358,9 @@ export function CallProvider({
         msg.kind === "avatar" ||
         msg.kind === "avatar-request" ||
         msg.kind === "group-created" ||
-        msg.kind === "group-request"
+        msg.kind === "group-request" ||
+        msg.kind === "voice-note" ||
+        msg.kind === "voice-transcript"
       ) {
         return;
       }

@@ -138,8 +138,9 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
     });
   }
 
-  async function sendVoice(blob: Blob, durationMs: number) {
+  async function sendVoice(blob: Blob, durationMs: number, isPtt = false) {
     const id = crypto.randomUUID();
+    const createdAt = Date.now();
     await db.voiceNotes.add({
       id,
       conversationId,
@@ -147,14 +148,49 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
       audioBlob: blob,
       transcript: null,
       durationMs,
-      createdAt: Date.now(),
+      createdAt,
       syncedAt: null,
       remoteUrl: null,
     });
 
+    // Send to peer immediately so PTT bursts are heard live.
+    const base64 = await blobToBase64(blob);
+    void emit({
+      kind: "voice-note",
+      from: self,
+      to: peer,
+      voiceNote: {
+        id,
+        conversationId,
+        senderId: self,
+        base64,
+        type: blob.type,
+        durationMs,
+        transcript: null,
+        createdAt,
+        isPtt,
+      },
+    });
+    sendPush({
+      to: [peer],
+      title: self,
+      body: isPtt ? "📻 Push-to-talk" : "🎤 Voice note",
+      conversationId,
+      tag: conversationId,
+    });
+
+    // On-device transcription happens after delivery; push the result
+    // to the peer once it's ready so their bubble fills in.
     try {
       const text = await transcribe(blob);
       await db.voiceNotes.update(id, { transcript: text });
+      void emit({
+        kind: "voice-transcript",
+        from: self,
+        to: peer,
+        voiceNoteId: id,
+        transcript: text,
+      });
     } catch (err) {
       console.error("Transcription failed", err);
       await db.voiceNotes.update(id, { transcript: "" });

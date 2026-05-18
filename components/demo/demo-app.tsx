@@ -18,6 +18,7 @@ import {
   notify,
   playMessageTone,
 } from "@/lib/demo/notifications";
+import { autoPlayVoiceNote, PTT_AUTOPLAY_WINDOW_MS } from "@/lib/demo/ptt";
 import { registerPushSubscription, sendPush } from "@/lib/demo/push";
 import { AnimatedBackground } from "./animated-background";
 import { BottomBar, type Tab } from "./bottom-bar";
@@ -189,6 +190,55 @@ export function DemoApp() {
             createdBy: g.createdBy,
             createdAt: g.createdAt,
           },
+        });
+        return;
+      }
+
+      if (event.kind === "voice-note") {
+        if (event.to !== self) return;
+        const vn = event.voiceNote;
+        const blob = base64ToBlob(vn.base64, vn.type);
+        await db.voiceNotes.put({
+          id: vn.id,
+          conversationId: vn.conversationId,
+          senderId: vn.senderId,
+          audioBlob: blob,
+          transcript: vn.transcript,
+          durationMs: vn.durationMs,
+          createdAt: vn.createdAt,
+          syncedAt: null,
+          remoteUrl: null,
+        });
+
+        // PTT bursts auto-play immediately (walkie-talkie behavior).
+        // Regular voice notes don't.
+        if (vn.isPtt && Date.now() - vn.createdAt < PTT_AUTOPLAY_WINDOW_MS) {
+          autoPlayVoiceNote(blob);
+        }
+
+        // Always surface a notification + chime for inbound voice notes
+        // (suppressed automatically when the tab is focused).
+        const isGroup = isGroupId(vn.conversationId);
+        const groupForTitle = isGroup
+          ? await db.groups.get(vn.conversationId)
+          : undefined;
+        notify(
+          isGroup
+            ? `${groupForTitle?.name ?? "Group"} — ${vn.senderId}`
+            : vn.senderId,
+          {
+            body: vn.isPtt ? "📻 Push-to-talk" : "🎤 Voice note",
+            tag: vn.conversationId,
+          },
+        );
+        if (!vn.isPtt) playMessageTone();
+        return;
+      }
+
+      if (event.kind === "voice-transcript") {
+        if (event.to !== self) return;
+        await db.voiceNotes.update(event.voiceNoteId, {
+          transcript: event.transcript,
         });
         return;
       }

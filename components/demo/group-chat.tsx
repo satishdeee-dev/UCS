@@ -139,8 +139,9 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
     });
   }
 
-  async function sendVoice(blob: Blob, durationMs: number) {
+  async function sendVoice(blob: Blob, durationMs: number, isPtt = false) {
     const id = crypto.randomUUID();
+    const createdAt = Date.now();
     await db.voiceNotes.add({
       id,
       conversationId: groupId,
@@ -148,19 +149,56 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
       audioBlob: blob,
       transcript: null,
       durationMs,
-      createdAt: Date.now(),
+      createdAt,
       syncedAt: null,
       remoteUrl: null,
     });
+
+    // Broadcast to all members. Opus at 24kbps keeps PTT clips tiny
+    // (~3 KB/sec → ~30 KB for a typical 10s burst, fan-out safe).
+    const base64 = await blobToBase64(blob);
+    for (const to of recipients) {
+      void emit({
+        kind: "voice-note",
+        from: self,
+        to,
+        voiceNote: {
+          id,
+          conversationId: groupId,
+          senderId: self,
+          base64,
+          type: blob.type,
+          durationMs,
+          transcript: null,
+          createdAt,
+          isPtt,
+        },
+      });
+    }
+    sendPush({
+      to: recipients,
+      title: `${group?.name ?? "Group"} — ${self}`,
+      body: isPtt ? "📻 Push-to-talk" : "🎤 Voice note",
+      conversationId: groupId,
+      tag: groupId,
+    });
+
     try {
       const text = await transcribe(blob);
       await db.voiceNotes.update(id, { transcript: text });
+      for (const to of recipients) {
+        void emit({
+          kind: "voice-transcript",
+          from: self,
+          to,
+          voiceNoteId: id,
+          transcript: text,
+        });
+      }
     } catch (err) {
       console.error("Transcription failed", err);
       await db.voiceNotes.update(id, { transcript: "" });
     }
-    // Voice notes in groups: local-only for now (Blob over per-recipient
-    // Realtime would balloon payloads; needs Storage to fan out cheaply).
   }
 
   const wallpaperId = useWallpaper(groupId);
