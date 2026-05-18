@@ -28,6 +28,7 @@ import { Chat } from "./chat";
 import { ChatProfile } from "./chat-profile";
 import { ConversationsList } from "./conversations-list";
 import { GroupChat } from "./group-chat";
+import { LeftRail } from "./left-rail";
 import { Logo } from "./logo";
 import { LoginFlow } from "./login-flow";
 import { Settings } from "./settings";
@@ -303,12 +304,22 @@ export function DemoApp() {
   // doesn't jump to the previous chat's profile).
   // We rely on setTarget callers to also setChatSubView("messages").
 
+  const changeTab = (next: Tab) => {
+    setTab(next);
+    if (next !== "chats") {
+      setTarget(null);
+      setChatSubView("messages");
+    }
+  };
+
   return (
     <CallProvider self={self}>
-      <div className="md:grid md:h-svh md:grid-cols-[320px_1fr]">
+      <div className="flex h-svh flex-col md:grid md:grid-cols-[64px_320px_1fr]">
+        <LeftRail active={tab} onChange={changeTab} />
+
         <aside
           className={cn(
-            "flex h-svh flex-col md:h-auto md:overflow-hidden md:border-r",
+            "flex h-full flex-1 flex-col overflow-hidden md:flex-initial md:border-r",
             inChatDetail && "hidden md:flex",
           )}
         >
@@ -346,20 +357,12 @@ export function DemoApp() {
               />
             )}
           </div>
-          <BottomBar
-            active={tab}
-            onChange={(next) => {
-              setTab(next);
-              if (next !== "chats") {
-                setTarget(null);
-                setChatSubView("messages");
-              }
-            }}
-          />
+          <BottomBar active={tab} onChange={changeTab} />
         </aside>
+
         <section
           className={cn(
-            "md:flex md:flex-col md:overflow-hidden",
+            "flex h-full flex-1 flex-col overflow-hidden md:flex-initial",
             !inChatDetail && "hidden md:flex",
           )}
         >

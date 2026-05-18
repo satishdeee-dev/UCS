@@ -17,7 +17,7 @@ const TABS: { id: Tab; label: string; icon: typeof MessageCircle }[] = [
 
 export function BottomBar({ active, onChange }: Props) {
   return (
-    <nav className="flex shrink-0 border-t bg-card pb-[env(safe-area-inset-bottom)]">
+    <nav className="flex shrink-0 border-t bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
       {TABS.map((tab) => {
         const isActive = active === tab.id;
         const Icon = tab.icon;
