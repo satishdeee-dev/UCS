@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DEMO_OTP, normalizePhone, setIdentity } from "@/lib/demo/identity";
+import { AnimatedBackground } from "./animated-background";
 import { Logo } from "./logo";
 
 export function LoginFlow({ onSignedIn }: { onSignedIn: (phone: string) => void }) {
@@ -37,15 +38,16 @@ export function LoginFlow({ onSignedIn }: { onSignedIn: (phone: string) => void 
   }
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col items-center justify-center px-6 py-12">
-      <div className="mb-6 flex flex-col items-center gap-3">
+    <main className="relative flex min-h-svh w-full flex-col items-center justify-center px-6 py-12">
+      <AnimatedBackground />
+      <div className="relative z-10 mb-6 flex flex-col items-center gap-3">
         <Logo size={56} />
         <h1 className="text-2xl font-semibold tracking-tight">CommApp</h1>
         <p className="text-center text-sm text-zinc-500">
           Offline-first messaging and calls — works without a network.
         </p>
       </div>
-      <Card className="w-full">
+      <Card className="relative z-10 w-full max-w-sm bg-card/95 backdrop-blur-sm">
         <CardHeader>
           <h2 className="text-sm font-medium">
             {step === "phone" ? "Sign in with your phone" : "Enter the code"}

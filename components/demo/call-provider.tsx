@@ -56,6 +56,9 @@ import { emit, listen, type BusEvent } from "@/lib/demo/transport";
 
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+  { urls: "stun:stun.cloudflare.com:3478" },
+  { urls: "stun:global.stun.twilio.com:3478" },
 ];
 
 export function CallProvider({
@@ -114,7 +117,12 @@ export function CallProvider({
         if (stream) setRemoteStream(stream);
       };
 
+      pc.oniceconnectionstatechange = () => {
+        console.log("[call] ICE:", pc.iceConnectionState);
+      };
+
       pc.onconnectionstatechange = () => {
+        console.log("[call] PC:", pc.connectionState);
         if (
           pc.connectionState === "failed" ||
           pc.connectionState === "disconnected" ||

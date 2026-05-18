@@ -135,3 +135,25 @@
     @apply font-sans;
   }
 }
+
+@keyframes commapp-blob {
+  0%,
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  25% {
+    transform: translate(40px, -30px) scale(1.08);
+  }
+  50% {
+    transform: translate(-30px, 40px) scale(0.94);
+  }
+  75% {
+    transform: translate(25px, 25px) scale(1.03);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .commapp-blob {
+    animation: none !important;
+  }
+}

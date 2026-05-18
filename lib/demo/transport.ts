@@ -16,6 +16,13 @@ import { createClient } from "@/lib/client";
 const CHANNEL_NAME = "commapp-bus";
 const EVENT_NAME = "commapp";
 
+export interface WireAttachment {
+  base64: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
 export interface LocalMessageWire {
   id: string;
   conversationId: string;
@@ -23,6 +30,7 @@ export interface LocalMessageWire {
   body: string;
   createdAt: number;
   syncedAt: number | null;
+  attachment?: WireAttachment;
 }
 
 export type BusEvent =

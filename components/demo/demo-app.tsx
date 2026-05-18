@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { db } from "@/lib/db";
+import { db, type LocalAttachment, type LocalMessage } from "@/lib/db";
 import { clearIdentity, getIdentity } from "@/lib/demo/identity";
+import { base64ToBlob } from "@/lib/demo/encoding";
 import { listen } from "@/lib/demo/transport";
+import { AnimatedBackground } from "./animated-background";
 import { CallProvider } from "./call-provider";
 import { CallOverlay } from "./call-overlay";
 import { LoginFlow } from "./login-flow";
@@ -33,7 +35,26 @@ export function DemoApp() {
     return listen((event) => {
       if (event.kind !== "message") return;
       if (event.to !== self) return;
-      void db.messages.put(event.message);
+      const wire = event.message;
+      let attachment: LocalAttachment | undefined;
+      if (wire.attachment) {
+        attachment = {
+          blob: base64ToBlob(wire.attachment.base64, wire.attachment.type),
+          name: wire.attachment.name,
+          type: wire.attachment.type,
+          size: wire.attachment.size,
+        };
+      }
+      const local: LocalMessage = {
+        id: wire.id,
+        conversationId: wire.conversationId,
+        senderId: wire.senderId,
+        body: wire.body,
+        createdAt: wire.createdAt,
+        syncedAt: wire.syncedAt,
+        attachment,
+      };
+      void db.messages.put(local);
     });
   }, [self]);
 
@@ -111,14 +132,15 @@ export function DemoApp() {
 
 function EmptyChatPlaceholder() {
   return (
-    <div className="hidden h-full flex-1 items-center justify-center bg-background md:flex">
-      <div className="flex max-w-sm flex-col items-center gap-3 px-6 text-center">
+    <div className="relative hidden h-full flex-1 items-center justify-center overflow-hidden bg-background md:flex">
+      <AnimatedBackground />
+      <div className="relative z-10 flex max-w-sm flex-col items-center gap-3 px-6 text-center">
         <Logo size={64} />
         <h2 className="text-lg font-semibold">Pick a conversation</h2>
         <p className="text-sm text-zinc-500">
           Or tap <span className="font-medium">New chat</span> in the sidebar to
-          start one. Open CommApp in another tab as a different phone number to
-          chat or call.
+          start one. Open CommApp on another phone or tab as a different number
+          to chat or call.
         </p>
       </div>
     </div>

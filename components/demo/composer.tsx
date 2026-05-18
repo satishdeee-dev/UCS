@@ -1,16 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, Send, Square } from "lucide-react";
+import { Mic, Paperclip, Send, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+const MAX_ATTACHMENT_BYTES = 500 * 1024; // ~500 KB raw → ~670 KB base64, fits Realtime broadcast
+const ACCEPTED_TYPES =
+  "image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt";
 
 interface Props {
   onSendText: (text: string) => void;
   onSendVoice: (blob: Blob, durationMs: number) => void;
+  onSendAttachment: (file: File) => void | Promise<void>;
 }
 
-export function Composer({ onSendText, onSendVoice }: Props) {
+export function Composer({ onSendText, onSendVoice, onSendAttachment }: Props) {
   const [text, setText] = useState("");
   const [recording, setRecording] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -20,6 +25,7 @@ export function Composer({ onSendText, onSendVoice }: Props) {
   const chunksRef = useRef<Blob[]>([]);
   const startedAtRef = useRef(0);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {
@@ -34,6 +40,25 @@ export function Composer({ onSendText, onSendVoice }: Props) {
     if (!trimmed) return;
     onSendText(trimmed);
     setText("");
+  }
+
+  function openFilePicker() {
+    setError(null);
+    fileInputRef.current?.click();
+  }
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file) return;
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setError(
+        `File too large (${Math.round(file.size / 1024)} KB). Demo limit is 500 KB until Storage is configured.`,
+      );
+      return;
+    }
+    setError(null);
+    await onSendAttachment(file);
   }
 
   async function startRecording() {
@@ -89,7 +114,14 @@ export function Composer({ onSendText, onSendVoice }: Props) {
   const elapsedLabel = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
   return (
-    <div className="flex flex-col gap-1 border-t bg-white px-3 py-2 dark:bg-zinc-950">
+    <div className="flex flex-col gap-1 border-t bg-card px-3 py-2">
+      <input
+        ref={fileInputRef}
+        type="file"
+        hidden
+        accept={ACCEPTED_TYPES}
+        onChange={handleFile}
+      />
       {error && <p className="text-xs text-red-500">{error}</p>}
       {recording ? (
         <div className="flex items-center gap-3">
@@ -111,6 +143,16 @@ export function Composer({ onSendText, onSendVoice }: Props) {
         </div>
       ) : (
         <form onSubmit={submitText} className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={openFilePicker}
+            className="rounded-full"
+            aria-label="Attach file"
+          >
+            <Paperclip className="size-4" />
+          </Button>
           <Input
             value={text}
             onChange={(e) => setText(e.target.value)}

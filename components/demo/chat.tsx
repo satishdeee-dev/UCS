@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { db, type LocalMessage, type LocalVoiceNote } from "@/lib/db";
 import { conversationIdFor } from "@/lib/demo/conversations";
 import { transcribe, warmTranscriber } from "@/lib/ai/transcribe";
+import { blobToBase64 } from "@/lib/demo/encoding";
 import { emit } from "@/lib/demo/transport";
 import { useCall } from "./call-provider";
 import { Composer } from "./composer";
@@ -56,7 +57,7 @@ export function Chat({ self, peer, onBack }: Props) {
   }, []);
 
   async function sendText(body: string) {
-    const message = {
+    const message: LocalMessage = {
       id: crypto.randomUUID(),
       conversationId,
       senderId: self,
@@ -65,7 +66,58 @@ export function Chat({ self, peer, onBack }: Props) {
       syncedAt: null,
     };
     await db.messages.add(message);
-    void emit({ kind: "message", from: self, to: peer, message });
+    void emit({
+      kind: "message",
+      from: self,
+      to: peer,
+      message: {
+        id: message.id,
+        conversationId: message.conversationId,
+        senderId: message.senderId,
+        body: message.body,
+        createdAt: message.createdAt,
+        syncedAt: message.syncedAt,
+      },
+    });
+  }
+
+  async function sendAttachment(file: File) {
+    const message: LocalMessage = {
+      id: crypto.randomUUID(),
+      conversationId,
+      senderId: self,
+      body: "",
+      createdAt: Date.now(),
+      syncedAt: null,
+      attachment: {
+        blob: file,
+        name: file.name,
+        type: file.type || "application/octet-stream",
+        size: file.size,
+      },
+    };
+    await db.messages.add(message);
+
+    const base64 = await blobToBase64(file);
+    void emit({
+      kind: "message",
+      from: self,
+      to: peer,
+      message: {
+        id: message.id,
+        conversationId: message.conversationId,
+        senderId: message.senderId,
+        body: message.body,
+        createdAt: message.createdAt,
+        syncedAt: message.syncedAt,
+        attachment: {
+          base64,
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          size: file.size,
+        },
+      },
+    });
   }
 
   async function sendVoice(blob: Blob, durationMs: number) {
@@ -149,6 +201,7 @@ export function Chat({ self, peer, onBack }: Props) {
                 key={`m-${item.data.id}`}
                 kind="text"
                 body={item.data.body}
+                attachment={item.data.attachment}
                 createdAt={item.data.createdAt}
                 outgoing={item.data.senderId === self}
               />
@@ -167,7 +220,11 @@ export function Chat({ self, peer, onBack }: Props) {
         })}
       </div>
 
-      <Composer onSendText={sendText} onSendVoice={sendVoice} />
+      <Composer
+        onSendText={sendText}
+        onSendVoice={sendVoice}
+        onSendAttachment={sendAttachment}
+      />
     </main>
   );
 }

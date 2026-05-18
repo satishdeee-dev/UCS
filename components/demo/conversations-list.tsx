@@ -40,10 +40,15 @@ export function ConversationsList({
       if (!conversationIncludes(m.conversationId, self)) continue;
       const ex = grouped.get(m.conversationId);
       if (!ex || m.createdAt > ex.createdAt) {
+        const preview = m.attachment
+          ? m.attachment.type.startsWith("image/")
+            ? "📷 Photo"
+            : `📎 ${m.attachment.name}`
+          : m.body;
         grouped.set(m.conversationId, {
           cid: m.conversationId,
           createdAt: m.createdAt,
-          preview: m.body,
+          preview,
         });
       }
     }

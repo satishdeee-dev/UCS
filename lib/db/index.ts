@@ -2,6 +2,13 @@
 
 import Dexie, { type Table } from "dexie";
 
+export interface LocalAttachment {
+  blob: Blob;
+  name: string;
+  type: string;
+  size: number;
+}
+
 export interface LocalMessage {
   id: string;
   conversationId: string;
@@ -9,6 +16,7 @@ export interface LocalMessage {
   body: string;
   createdAt: number;
   syncedAt: number | null;
+  attachment?: LocalAttachment;
 }
 
 export interface LocalVoiceNote {
