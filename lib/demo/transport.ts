@@ -33,6 +33,11 @@ export interface LocalMessageWire {
   attachment?: WireAttachment;
 }
 
+export interface WireAvatar {
+  base64: string;
+  type: string;
+}
+
 export type BusEvent =
   | { kind: "message"; from: string; to: string; message: LocalMessageWire }
   | {
@@ -63,7 +68,9 @@ export type BusEvent =
       to: string;
       callId: string;
       reason: "declined" | "ended" | "busy";
-    };
+    }
+  | { kind: "avatar"; from: string; avatar: WireAvatar | null }
+  | { kind: "avatar-request"; from: string; to: string };
 
 type Handler = (event: BusEvent) => void;
 

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { db, type LocalAttachment, type LocalMessage } from "@/lib/db";
 import { clearIdentity, getIdentity } from "@/lib/demo/identity";
-import { base64ToBlob } from "@/lib/demo/encoding";
-import { listen } from "@/lib/demo/transport";
+import { base64ToBlob, blobToBase64 } from "@/lib/demo/encoding";
+import { emit, listen } from "@/lib/demo/transport";
 import { AnimatedBackground } from "./animated-background";
 import { CallProvider } from "./call-provider";
 import { CallOverlay } from "./call-overlay";
@@ -29,33 +29,100 @@ export function DemoApp() {
 
   const self = hydration.state === "ready" ? hydration.self : null;
 
-  // Inbound messages from peers (cross-device, via Supabase Realtime).
+  // Track which peers we've already asked for an avatar so we don't spam.
+  const askedRef = useRef<Set<string>>(new Set());
+
+  // Inbound events from peers (cross-device, via Supabase Realtime).
   useEffect(() => {
     if (!self) return;
-    return listen((event) => {
-      if (event.kind !== "message") return;
-      if (event.to !== self) return;
-      const wire = event.message;
-      let attachment: LocalAttachment | undefined;
-      if (wire.attachment) {
-        attachment = {
-          blob: base64ToBlob(wire.attachment.base64, wire.attachment.type),
-          name: wire.attachment.name,
-          type: wire.attachment.type,
-          size: wire.attachment.size,
+    return listen(async (event) => {
+      if (event.kind === "message") {
+        if (event.to !== self) return;
+        const wire = event.message;
+        let attachment: LocalAttachment | undefined;
+        if (wire.attachment) {
+          attachment = {
+            blob: base64ToBlob(wire.attachment.base64, wire.attachment.type),
+            name: wire.attachment.name,
+            type: wire.attachment.type,
+            size: wire.attachment.size,
+          };
+        }
+        const local: LocalMessage = {
+          id: wire.id,
+          conversationId: wire.conversationId,
+          senderId: wire.senderId,
+          body: wire.body,
+          createdAt: wire.createdAt,
+          syncedAt: wire.syncedAt,
+          attachment,
         };
+        void db.messages.put(local);
+
+        // First time we hear from this peer and don't have their photo? Ask.
+        const peer = event.from;
+        if (!askedRef.current.has(peer)) {
+          const existing = await db.users.get(peer);
+          if (!existing?.avatarBlob) {
+            askedRef.current.add(peer);
+            void emit({ kind: "avatar-request", from: self, to: peer });
+          }
+        }
+        return;
       }
-      const local: LocalMessage = {
-        id: wire.id,
-        conversationId: wire.conversationId,
-        senderId: wire.senderId,
-        body: wire.body,
-        createdAt: wire.createdAt,
-        syncedAt: wire.syncedAt,
-        attachment,
-      };
-      void db.messages.put(local);
+
+      if (event.kind === "avatar") {
+        const blob = event.avatar
+          ? base64ToBlob(event.avatar.base64, event.avatar.type)
+          : undefined;
+        const existing = await db.users.get(event.from);
+        await db.users.put({
+          id: event.from,
+          email: existing?.email ?? "",
+          displayName: existing?.displayName ?? event.from,
+          avatarUrl: null,
+          avatarBlob: blob,
+          lastSeenAt: Date.now(),
+        });
+        return;
+      }
+
+      if (event.kind === "avatar-request") {
+        if (event.to !== self) return;
+        const me = await db.users.get(self);
+        if (!me?.avatarBlob) {
+          void emit({ kind: "avatar", from: self, avatar: null });
+          return;
+        }
+        const base64 = await blobToBase64(me.avatarBlob);
+        void emit({
+          kind: "avatar",
+          from: self,
+          avatar: { base64, type: me.avatarBlob.type },
+        });
+        return;
+      }
     });
+  }, [self]);
+
+  // Announce our avatar (if any) when we sign in, so already-online peers
+  // can pick it up without having to ping us first.
+  useEffect(() => {
+    if (!self) return;
+    let cancelled = false;
+    (async () => {
+      const me = await db.users.get(self);
+      if (cancelled || !me?.avatarBlob) return;
+      const base64 = await blobToBase64(me.avatarBlob);
+      void emit({
+        kind: "avatar",
+        from: self,
+        avatar: { base64, type: me.avatarBlob.type },
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [self]);
 
   if (hydration.state === "loading") {

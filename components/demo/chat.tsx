@@ -9,6 +9,7 @@ import { conversationIdFor } from "@/lib/demo/conversations";
 import { transcribe, warmTranscriber } from "@/lib/ai/transcribe";
 import { blobToBase64 } from "@/lib/demo/encoding";
 import { emit } from "@/lib/demo/transport";
+import { Avatar } from "./avatar";
 import { useCall } from "./call-provider";
 import { Composer } from "./composer";
 import { MessageBubble } from "./message-bubble";
@@ -158,9 +159,7 @@ export function Chat({ self, peer, onBack }: Props) {
         >
           <ArrowLeft className="size-4" />
         </Button>
-        <div className="flex size-9 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 dark:bg-indigo-900/70 dark:text-indigo-200">
-          {peer.slice(-2)}
-        </div>
+        <Avatar phone={peer} size={36} />
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-mono text-sm">{peer}</span>
           <span className="text-[10px] text-zinc-500">offline-first</span>

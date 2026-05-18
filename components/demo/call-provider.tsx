@@ -289,6 +289,11 @@ export function CallProvider({
     if (!self) return;
 
     return listen(async (msg) => {
+      // CallProvider only handles call-related events; avatar/message
+      // events flow through DemoApp's listener.
+      if (msg.kind === "message" || msg.kind === "avatar" || msg.kind === "avatar-request") {
+        return;
+      }
       if (msg.to !== self) return;
       const current = stateRef.current;
 

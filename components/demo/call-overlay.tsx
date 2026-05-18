@@ -10,6 +10,7 @@ import {
   VideoOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Avatar } from "./avatar";
 import { useCall } from "./call-provider";
 
 export function CallOverlay() {
@@ -89,9 +90,7 @@ export function CallOverlay() {
           {!remoteStream && (
             <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80">
               <div className="flex flex-col items-center gap-3">
-                <div className="flex size-20 items-center justify-center rounded-full bg-indigo-600 text-xl font-semibold">
-                  {peer.slice(-2)}
-                </div>
+                <Avatar phone={peer} size={96} />
                 <span className="font-mono text-lg">{peer}</span>
                 <span className="text-sm text-zinc-400">{statusLabel}</span>
               </div>
@@ -128,9 +127,7 @@ export function CallOverlay() {
       ) : (
         <>
           <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6">
-            <div className="flex size-24 items-center justify-center rounded-full bg-indigo-600 text-2xl font-semibold">
-              {peer.slice(-2)}
-            </div>
+            <Avatar phone={peer} size={112} />
             <div className="flex flex-col items-center gap-1">
               <span className="font-mono text-lg">{peer}</span>
               <span className="text-sm text-zinc-400">{statusLabel}</span>

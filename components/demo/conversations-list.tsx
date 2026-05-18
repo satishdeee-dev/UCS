@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { db } from "@/lib/db";
 import { conversationIncludes, getPeer } from "@/lib/demo/conversations";
 import { normalizePhone } from "@/lib/demo/identity";
+import { Avatar } from "./avatar";
 import { Logo } from "./logo";
 
 interface Props {
@@ -159,9 +160,7 @@ export function ConversationsList({
                 onClick={() => onSelect(peer)}
                 className={`flex w-full items-center gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30 ${isActive ? "bg-indigo-50 dark:bg-indigo-950/40" : ""}`}
               >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 dark:bg-indigo-900/70 dark:text-indigo-200">
-                  {peer.slice(-2)}
-                </div>
+                <Avatar phone={peer} size={40} />
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="font-mono text-sm">{peer}</span>
                   <span className="truncate text-xs text-zinc-500">

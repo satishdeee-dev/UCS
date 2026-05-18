@@ -36,6 +36,7 @@ export interface LocalUser {
   email: string;
   displayName: string;
   avatarUrl: string | null;
+  avatarBlob?: Blob;
   lastSeenAt: number;
 }
 
