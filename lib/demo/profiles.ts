@@ -47,19 +47,23 @@ export async function registerProfile(
 }
 
 /**
- * Admin-only: fetch every profile. Returns a 401 if the password is
- * wrong, 503 if the env var isn't set on the server.
+ * Admin-only: fetch every profile. Returns a 401 if the username/
+ * password is wrong, 503 if the env vars aren't set on the server.
  */
 export async function listProfiles(
+  username: string,
   password: string,
 ): Promise<
-  | { ok: true; profiles: ProfileRow[] }
+  | { ok: true; profiles: ProfileRow[]; admin: { username: string } }
   | { ok: false; status: number; error: string }
 > {
   try {
     const res = await fetch("/api/profile/list", {
       method: "GET",
-      headers: { "x-admin-password": password },
+      headers: {
+        "x-admin-username": username,
+        "x-admin-password": password,
+      },
     });
     if (!res.ok) {
       let msg = `HTTP ${res.status}`;
@@ -71,8 +75,15 @@ export async function listProfiles(
       }
       return { ok: false, status: res.status, error: msg };
     }
-    const body = (await res.json()) as { profiles: ProfileRow[] };
-    return { ok: true, profiles: body.profiles ?? [] };
+    const body = (await res.json()) as {
+      profiles: ProfileRow[];
+      admin: { username: string };
+    };
+    return {
+      ok: true,
+      profiles: body.profiles ?? [],
+      admin: body.admin,
+    };
   } catch (err) {
     return {
       ok: false,
