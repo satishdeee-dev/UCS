@@ -7,8 +7,22 @@ export interface ProfileRow {
   display_name: string | null;
   avatar_base64: string | null;
   avatar_mime: string | null;
+  sign_in_count: number;
   first_seen_at: string;
   last_seen_at: string;
+  device_count: number;
+  days_active: number;
+}
+
+export interface ProfileStats {
+  total: number;
+  active_24h: number;
+  active_7d: number;
+  new_7d: number;
+  with_photo: number;
+  with_push: number;
+  total_devices: number;
+  total_sign_ins: number;
 }
 
 /**
@@ -54,7 +68,12 @@ export async function listProfiles(
   username: string,
   password: string,
 ): Promise<
-  | { ok: true; profiles: ProfileRow[]; admin: { username: string } }
+  | {
+      ok: true;
+      profiles: ProfileRow[];
+      stats: ProfileStats;
+      admin: { username: string };
+    }
   | { ok: false; status: number; error: string }
 > {
   try {
@@ -77,11 +96,13 @@ export async function listProfiles(
     }
     const body = (await res.json()) as {
       profiles: ProfileRow[];
+      stats: ProfileStats;
       admin: { username: string };
     };
     return {
       ok: true,
       profiles: body.profiles ?? [],
+      stats: body.stats,
       admin: body.admin,
     };
   } catch (err) {

@@ -9,6 +9,7 @@ create table public.commapp_profiles (
   display_name    text,
   avatar_base64   text,                       -- 256² JPEG, ~30 KB
   avatar_mime     text,
+  sign_in_count   integer not null default 1, -- bumped on every register
   first_seen_at   timestamptz not null default now(),
   last_seen_at    timestamptz not null default now()
 );

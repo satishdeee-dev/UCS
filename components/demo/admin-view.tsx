@@ -2,12 +2,29 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ArrowLeft, RefreshCw, Search, Shield, User } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  ChevronDown,
+  Image as ImageIcon,
+  RefreshCw,
+  Search,
+  Shield,
+  Smartphone,
+  TrendingUp,
+  User,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { listProfiles, type ProfileRow } from "@/lib/demo/profiles";
+import {
+  listProfiles,
+  type ProfileRow,
+  type ProfileStats,
+} from "@/lib/demo/profiles";
 import { AnimatedBackground } from "./animated-background";
 import { Logo } from "./logo";
 
@@ -17,6 +34,7 @@ type State =
   | {
       phase: "ready";
       profiles: ProfileRow[];
+      stats: ProfileStats;
       admin: { username: string };
       credentials: { username: string; password: string };
     }
@@ -42,6 +60,7 @@ export function AdminView() {
       setState({
         phase: "ready",
         profiles: result.profiles,
+        stats: result.stats,
         admin: result.admin,
         credentials: { username, password },
       });
@@ -61,6 +80,7 @@ export function AdminView() {
       setState({
         phase: "ready",
         profiles: result.profiles,
+        stats: result.stats,
         admin: result.admin,
         credentials: state.credentials,
       });
@@ -219,8 +239,10 @@ function RosterScreen({
     );
   }, [search, state.profiles]);
 
+  const { stats } = state;
+
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-4xl flex-col bg-background">
+    <main className="mx-auto flex min-h-svh w-full max-w-5xl flex-col bg-background">
       <header className="flex items-center gap-3 border-b bg-card px-4 py-3">
         <Link
           href="/demo"
@@ -233,9 +255,6 @@ function RosterScreen({
           <h1 className="text-base font-semibold tracking-tight">
             CommApp users
           </h1>
-          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-            {state.profiles.length}
-          </span>
         </div>
         <Button onClick={onRefresh} variant="ghost" size="sm">
           <RefreshCw className="size-4" /> Refresh
@@ -245,8 +264,7 @@ function RosterScreen({
         </Button>
       </header>
 
-      {/* Admin identity card */}
-      <div className="border-b bg-card px-4 py-3">
+      <div className="flex flex-col gap-3 border-b bg-card px-4 py-3">
         <Card className="border-indigo-200 bg-indigo-50/50 dark:border-indigo-900/50 dark:bg-indigo-950/30">
           <CardContent className="flex items-center gap-3 py-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white">
@@ -263,6 +281,8 @@ function RosterScreen({
             </span>
           </CardContent>
         </Card>
+
+        <KpiGrid stats={stats} />
       </div>
 
       <div className="flex items-center gap-2 border-b bg-card px-4 py-2">
@@ -273,6 +293,9 @@ function RosterScreen({
           placeholder="Search phone or display name"
           className="h-8 border-none bg-transparent shadow-none focus-visible:ring-0"
         />
+        <span className="text-xs text-zinc-500">
+          {filtered.length} / {state.profiles.length}
+        </span>
       </div>
 
       {filtered.length === 0 ? (
@@ -292,7 +315,50 @@ function RosterScreen({
   );
 }
 
+function KpiGrid({ stats }: { stats: ProfileStats }) {
+  const items: { icon: typeof Users; label: string; value: number }[] = [
+    { icon: Users, label: "Total users", value: stats.total },
+    { icon: TrendingUp, label: "Active 24h", value: stats.active_24h },
+    { icon: TrendingUp, label: "Active 7d", value: stats.active_7d },
+    { icon: UserPlus, label: "New 7d", value: stats.new_7d },
+    { icon: ImageIcon, label: "With photo", value: stats.with_photo },
+    { icon: Smartphone, label: "Devices", value: stats.total_devices },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      {items.map((kpi) => {
+        const Icon = kpi.icon;
+        return (
+          <div
+            key={kpi.label}
+            className="flex flex-col gap-1 rounded-md border bg-card px-3 py-2"
+          >
+            <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+              <Icon className="size-3" />
+              {kpi.label}
+            </div>
+            <span className="text-xl font-semibold tabular-nums">
+              {kpi.value}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function relativeTime(date: string): string {
+  const ms = Date.now() - new Date(date).getTime();
+  if (ms < 0) return "in the future";
+  if (ms < 60_000) return "just now";
+  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m ago`;
+  if (ms < 86_400_000) return `${Math.floor(ms / 3_600_000)}h ago`;
+  if (ms < 604_800_000) return `${Math.floor(ms / 86_400_000)}d ago`;
+  return `${Math.floor(ms / 604_800_000)}w ago`;
+}
+
 function ProfileRowView({ profile }: { profile: ProfileRow }) {
+  const [expanded, setExpanded] = useState(false);
   const initials = profile.phone.slice(-2);
   const dataUrl =
     profile.avatar_base64 && profile.avatar_mime
@@ -300,33 +366,124 @@ function ProfileRowView({ profile }: { profile: ProfileRow }) {
       : null;
   const firstSeen = new Date(profile.first_seen_at).toLocaleString();
   const lastSeen = new Date(profile.last_seen_at).toLocaleString();
+  const isActive24h =
+    Date.now() - new Date(profile.last_seen_at).getTime() < 86_400_000;
 
   return (
-    <li className="flex items-center gap-3 border-b px-4 py-3">
-      {dataUrl ? (
-        <img
-          src={dataUrl}
-          alt={profile.phone}
-          className="size-10 shrink-0 rounded-full object-cover"
+    <li className="border-b">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900"
+      >
+        <div className="relative shrink-0">
+          {dataUrl ? (
+            <img
+              src={dataUrl}
+              alt={profile.phone}
+              className="size-10 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex size-10 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 dark:bg-indigo-900/70 dark:text-indigo-200">
+              <User className="size-4" aria-hidden />
+              <span className="sr-only">{initials}</span>
+            </div>
+          )}
+          {isActive24h && (
+            <span
+              className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-card bg-emerald-500"
+              title="Active in last 24h"
+            />
+          )}
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate font-mono text-sm">{profile.phone}</span>
+          {profile.display_name && (
+            <span className="truncate text-xs text-zinc-500">
+              {profile.display_name}
+            </span>
+          )}
+          <div className="mt-1 flex flex-wrap gap-1.5 text-[10px]">
+            <Badge
+              icon={<RefreshCw className="size-2.5" />}
+              label={`${profile.sign_in_count} sign-in${profile.sign_in_count === 1 ? "" : "s"}`}
+            />
+            <Badge
+              icon={<Smartphone className="size-2.5" />}
+              label={`${profile.device_count} device${profile.device_count === 1 ? "" : "s"}`}
+            />
+            <Badge
+              icon={<Calendar className="size-2.5" />}
+              label={`${profile.days_active} day${profile.days_active === 1 ? "" : "s"} active`}
+            />
+          </div>
+        </div>
+
+        <div className="hidden flex-col items-end gap-0.5 text-[10px] text-zinc-500 sm:flex">
+          <span className="text-xs text-zinc-700 dark:text-zinc-300">
+            {relativeTime(profile.last_seen_at)}
+          </span>
+          <span>Joined {relativeTime(profile.first_seen_at)}</span>
+        </div>
+
+        <ChevronDown
+          className={`size-4 shrink-0 text-zinc-400 transition-transform ${expanded ? "rotate-180" : ""}`}
         />
-      ) : (
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 dark:bg-indigo-900/70 dark:text-indigo-200">
-          <User className="size-4" aria-hidden />
-          <span className="sr-only">{initials}</span>
+      </button>
+
+      {expanded && (
+        <div className="grid grid-cols-1 gap-3 border-t bg-zinc-50/60 px-4 py-3 text-xs sm:grid-cols-2 dark:bg-zinc-900/40">
+          <DetailField label="Phone" value={profile.phone} mono />
+          <DetailField
+            label="Display name"
+            value={profile.display_name ?? "—"}
+          />
+          <DetailField label="Sign-ins" value={String(profile.sign_in_count)} />
+          <DetailField
+            label="Devices (push)"
+            value={String(profile.device_count)}
+          />
+          <DetailField
+            label="Days active"
+            value={String(profile.days_active)}
+          />
+          <DetailField
+            label="Has photo"
+            value={profile.avatar_base64 ? "Yes" : "No"}
+          />
+          <DetailField label="First seen" value={firstSeen} />
+          <DetailField label="Last seen" value={lastSeen} />
         </div>
       )}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate font-mono text-sm">{profile.phone}</span>
-        {profile.display_name && (
-          <span className="truncate text-xs text-zinc-500">
-            {profile.display_name}
-          </span>
-        )}
-      </div>
-      <div className="flex flex-col items-end text-[10px] text-zinc-500">
-        <span>Last seen {lastSeen}</span>
-        <span>First seen {firstSeen}</span>
-      </div>
     </li>
+  );
+}
+
+function Badge({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-1.5 py-0.5 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+      {icon}
+      {label}
+    </span>
+  );
+}
+
+function DetailField({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex flex-col">
+      <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+        {label}
+      </span>
+      <span className={mono ? "font-mono text-sm" : "text-sm"}>{value}</span>
+    </div>
   );
 }
