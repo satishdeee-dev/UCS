@@ -30,7 +30,7 @@ export function LeftRail({ active, onChange }: Props) {
               key={tab.id}
               type="button"
               onClick={() => onChange(tab.id)}
-              className={`flex w-14 flex-col items-center gap-1 rounded-lg px-1 py-2.5 text-[10px] font-medium transition-colors ${
+              className={`relative flex w-14 flex-col items-center gap-1 rounded-lg px-1 py-2.5 text-[10px] font-medium transition-all ${
                 isActive
                   ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-200"
                   : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
@@ -38,6 +38,12 @@ export function LeftRail({ active, onChange }: Props) {
               aria-pressed={isActive}
               aria-label={tab.label}
             >
+              {isActive && (
+                <span
+                  className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-indigo-500"
+                  aria-hidden
+                />
+              )}
               <Icon
                 className="size-5"
                 fill={isActive ? "currentColor" : "none"}
