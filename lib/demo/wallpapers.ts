@@ -8,58 +8,58 @@ export type WallpaperId = "default" | "plain" | "warm" | "cool" | "doodle";
 export interface WallpaperPreset {
   id: WallpaperId;
   label: string;
-  bgColor?: string;
+  /** CSS bg-image overlay rendered on top of the app's --background. */
   bgImage?: string;
   bgSize?: string;
-  /** CSS background shorthand for a small swatch preview. */
+  /** CSS background shorthand for the picker swatch preview. */
   thumb: string;
 }
+
+// Wallpapers are now translucent overlays — no solid bgColor — so they
+// read correctly over both light and dark theme backgrounds. The picker
+// swatches still show their accent color so the user can tell them apart.
 
 export const WALLPAPERS: WallpaperPreset[] = [
   {
     id: "default",
     label: "Default",
     bgImage:
-      "radial-gradient(circle at 1px 1px, rgba(99,102,241,0.10) 1px, transparent 0)",
+      "radial-gradient(circle at 1px 1px, rgba(99,102,241,0.18) 1px, transparent 0)",
     bgSize: "22px 22px",
     thumb:
-      "radial-gradient(circle at 1px 1px, rgba(99,102,241,0.45) 1px, transparent 0) 0 0 / 8px 8px white",
+      "radial-gradient(circle at 1px 1px, rgba(99,102,241,0.55) 1px, transparent 0) 0 0 / 8px 8px #1c1b2e",
   },
   {
     id: "plain",
     label: "Plain",
-    bgColor: "white",
-    thumb: "white",
+    thumb: "#0f0f1a",
   },
   {
     id: "warm",
     label: "Warm",
-    bgColor: "#fffbeb",
     bgImage:
-      "radial-gradient(circle at 1px 1px, rgba(245,158,11,0.15) 1px, transparent 0)",
+      "radial-gradient(circle at 1px 1px, rgba(245,158,11,0.22) 1px, transparent 0)",
     bgSize: "22px 22px",
     thumb:
-      "radial-gradient(circle at 1px 1px, rgba(245,158,11,0.55) 1px, transparent 0) 0 0 / 8px 8px #fffbeb",
+      "radial-gradient(circle at 1px 1px, rgba(245,158,11,0.7) 1px, transparent 0) 0 0 / 8px 8px #2a1f10",
   },
   {
     id: "cool",
     label: "Cool",
-    bgColor: "#ecfeff",
     bgImage:
-      "radial-gradient(circle at 1px 1px, rgba(20,184,166,0.18) 1px, transparent 0)",
+      "radial-gradient(circle at 1px 1px, rgba(20,184,166,0.22) 1px, transparent 0)",
     bgSize: "22px 22px",
     thumb:
-      "radial-gradient(circle at 1px 1px, rgba(20,184,166,0.6) 1px, transparent 0) 0 0 / 8px 8px #ecfeff",
+      "radial-gradient(circle at 1px 1px, rgba(20,184,166,0.7) 1px, transparent 0) 0 0 / 8px 8px #0f2a26",
   },
   {
     id: "doodle",
     label: "Doodle",
-    bgColor: "#fafafa",
     bgImage:
-      "repeating-linear-gradient(45deg, rgba(99,102,241,0.08) 0 2px, transparent 2px 14px)",
+      "repeating-linear-gradient(45deg, rgba(99,102,241,0.14) 0 2px, transparent 2px 14px)",
     bgSize: "20px 20px",
     thumb:
-      "repeating-linear-gradient(45deg, rgba(99,102,241,0.45) 0 1.5px, transparent 1.5px 8px) #fafafa",
+      "repeating-linear-gradient(45deg, rgba(99,102,241,0.55) 0 1.5px, transparent 1.5px 8px) #1c1b2e",
   },
 ];
 
@@ -100,7 +100,6 @@ export function useWallpaper(conversationId: string): WallpaperId {
 export function getWallpaperStyle(id: WallpaperId): CSSProperties {
   const preset = WALLPAPERS.find((p) => p.id === id) ?? WALLPAPERS[0];
   return {
-    backgroundColor: preset.bgColor,
     backgroundImage: preset.bgImage,
     backgroundSize: preset.bgSize,
   };
