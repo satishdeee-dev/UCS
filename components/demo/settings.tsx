@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
@@ -8,7 +7,6 @@ import {
   ChevronRight,
   Info,
   LogOut,
-  Shield,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -175,20 +173,6 @@ export function Settings({ self, onSignedOut }: Props) {
               </div>
               <ChevronRight className="size-4 text-zinc-400" />
             </button>
-
-            <Link
-              href="/demo/admin"
-              className="flex items-center gap-3 border-b px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900"
-            >
-              <Shield className="size-4 text-indigo-600" />
-              <div className="flex flex-1 flex-col">
-                <span className="text-sm font-medium">Admin dashboard</span>
-                <span className="text-xs text-zinc-500">
-                  See every user that has signed in to CommApp
-                </span>
-              </div>
-              <ChevronRight className="size-4 text-zinc-400" />
-            </Link>
 
             <details className="group">
               <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900">
