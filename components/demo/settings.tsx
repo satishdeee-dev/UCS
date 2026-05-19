@@ -3,9 +3,16 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Camera, LogOut, Shield, Trash2 } from "lucide-react";
+import {
+  Camera,
+  ChevronRight,
+  Info,
+  LogOut,
+  Shield,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { clearIdentity } from "@/lib/demo/identity";
 import { blobToBase64 } from "@/lib/demo/encoding";
@@ -20,8 +27,8 @@ interface Props {
   onSignedOut: () => void;
 }
 
-const VERSION = "0.6 — demo";
-const MAX_AVATAR_INPUT_BYTES = 10 * 1024 * 1024; // 10 MB raw; resized to 256² JPEG before storing
+const VERSION = "0.9 — demo";
+const MAX_AVATAR_INPUT_BYTES = 10 * 1024 * 1024;
 
 export function Settings({ self, onSignedOut }: Props) {
   const me = useLiveQuery(() => db.users.get(self), [self]);
@@ -36,6 +43,8 @@ export function Settings({ self, onSignedOut }: Props) {
       db.vectors.clear(),
       db.syncQueue.clear(),
       db.users.clear(),
+      db.callHistory.clear(),
+      db.groups.clear(),
     ]);
     setConfirmingClear(false);
   }
@@ -113,143 +122,145 @@ export function Settings({ self, onSignedOut }: Props) {
           accept="image/*"
           onChange={handlePhotoFile}
         />
+
+        {/* 1. Profile — big and visual */}
         <Card>
-          <CardHeader>
-            <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-              Profile
-            </span>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+          <CardContent className="flex flex-col items-center gap-3 py-6">
             <button
               type="button"
               onClick={openFilePicker}
-              className="group relative shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2 rounded-full"
+              className="group relative rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2"
               aria-label="Change profile photo"
             >
-              <Avatar phone={self} size={96} />
+              <Avatar phone={self} size={112} />
               <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 opacity-0 transition-opacity group-hover:bg-black/40 group-hover:opacity-100">
                 <Camera className="size-7 text-white" />
               </span>
             </button>
-            <div className="flex flex-1 flex-col items-center gap-2 sm:items-start">
-              <div className="flex flex-col items-center sm:items-start">
-                <span className="text-xs text-zinc-500">Signed in as</span>
-                <span className="font-mono text-sm">{self}</span>
-              </div>
-              {photoError && (
-                <p className="text-xs text-red-500">{photoError}</p>
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="font-mono text-base">{self}</span>
+              <span className="text-xs text-zinc-500">Signed in</span>
+            </div>
+            {photoError && (
+              <p className="text-xs text-red-500">{photoError}</p>
+            )}
+            <div className="flex gap-2">
+              <Button onClick={openFilePicker} variant="outline" size="sm">
+                <Camera className="size-4" />
+                {me?.avatarBlob ? "Change photo" : "Add photo"}
+              </Button>
+              {me?.avatarBlob && (
+                <Button onClick={removePhoto} variant="ghost" size="sm">
+                  Remove
+                </Button>
               )}
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={openFilePicker} variant="outline" size="sm">
-                  <Camera className="size-4" />
-                  {me?.avatarBlob ? "Change photo" : "Add photo"}
-                </Button>
-                {me?.avatarBlob && (
-                  <Button onClick={removePhoto} variant="ghost" size="sm">
-                    Remove
-                  </Button>
-                )}
-                <Button onClick={signOut} variant="ghost" size="sm">
-                  <LogOut className="size-4" /> Sign out
-                </Button>
-              </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* 2. Quick rows — Local data, Admin, About */}
         <Card>
-          <CardHeader>
-            <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-              Admin
-            </span>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2 text-sm">
-            <p className="text-zinc-600 dark:text-zinc-400">
-              Sign in as an admin to see every user that has signed in to
-              CommApp.
-            </p>
+          <CardContent className="flex flex-col p-0">
+            <button
+              type="button"
+              onClick={() => setConfirmingClear(true)}
+              className="flex items-center gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900"
+            >
+              <Trash2 className="size-4 text-zinc-500" />
+              <div className="flex flex-1 flex-col">
+                <span className="text-sm font-medium">Clear local data</span>
+                <span className="text-xs text-zinc-500">
+                  Wipes messages, voice notes, and photos on this device
+                </span>
+              </div>
+              <ChevronRight className="size-4 text-zinc-400" />
+            </button>
+
             <Link
               href="/demo/admin"
-              className="inline-flex w-fit items-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200 dark:hover:bg-indigo-950"
+              className="flex items-center gap-3 border-b px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900"
             >
-              <Shield className="size-4" />
-              Open admin dashboard
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-              Local data
-            </span>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2 text-sm">
-            <p className="text-zinc-600 dark:text-zinc-400">
-              All messages, voice notes, and your profile photo are stored in
-              this browser. Clearing wipes them on this device.
-            </p>
-            {confirmingClear ? (
-              <div className="flex flex-col gap-2 rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/30">
-                <p className="text-sm">
-                  This will delete all messages, voice notes, profile photos,
-                  and embeddings on this device. It can&apos;t be undone.
-                </p>
-                <div className="flex gap-2">
-                  <Button variant="destructive" size="sm" onClick={clearAllData}>
-                    Delete everything
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setConfirmingClear(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
+              <Shield className="size-4 text-indigo-600" />
+              <div className="flex flex-1 flex-col">
+                <span className="text-sm font-medium">Admin dashboard</span>
+                <span className="text-xs text-zinc-500">
+                  See every user that has signed in to CommApp
+                </span>
               </div>
-            ) : (
-              <Button
-                onClick={() => setConfirmingClear(true)}
-                variant="outline"
-                className="self-start"
-              >
-                <Trash2 className="size-4" /> Clear local data
-              </Button>
-            )}
+              <ChevronRight className="size-4 text-zinc-400" />
+            </Link>
+
+            <details className="group">
+              <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900">
+                <Info className="size-4 text-zinc-500" />
+                <div className="flex flex-1 flex-col">
+                  <span className="text-sm font-medium">About CommApp</span>
+                  <span className="text-xs text-zinc-500">
+                    Version, transport, and credits
+                  </span>
+                </div>
+                <ChevronRight className="size-4 text-zinc-400 transition-transform group-open:rotate-90" />
+              </summary>
+              <div className="flex flex-col gap-3 border-t bg-zinc-50/60 px-4 py-3 text-sm text-zinc-600 dark:bg-zinc-900/40 dark:text-zinc-400">
+                <div className="flex items-center gap-3">
+                  <Logo size={36} />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-foreground">
+                      CommApp
+                    </span>
+                    <span className="text-xs">version {VERSION}</span>
+                  </div>
+                </div>
+                <p>
+                  Cross-device messaging and audio/video calls between dummy
+                  numbers. Demo OTP is{" "}
+                  <span className="font-mono">1234</span>; any phone number
+                  works.
+                </p>
+                <p>
+                  Messaging + WebRTC signaling uses Supabase Realtime;
+                  per-device storage in{" "}
+                  <span className="font-mono">IndexedDB</span> via Dexie.
+                  Whisper-tiny transcribes voice notes locally; WebRTC calls
+                  fall through public STUN servers.
+                </p>
+              </div>
+            </details>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-3">
-            <Logo size={40} />
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold">CommApp</span>
-              <span className="text-xs text-zinc-500">version {VERSION}</span>
-            </div>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-            <p>
-              Cross-device messaging and audio/video calls between dummy
-              numbers. Open CommApp on another phone or tab with a different
-              number to chat or call.
-            </p>
-            <p>
-              Demo OTP is <span className="font-mono">1234</span>. Any phone
-              number works.
-            </p>
-            <p>
-              Cross-device messaging and WebRTC signaling use Supabase Realtime
-              broadcast. Local persistence in{" "}
-              <span className="font-mono">IndexedDB</span> via Dexie.
-            </p>
-            <p>
-              Voice transcription runs locally via Whisper-tiny. WebRTC calls
-              use multiple public STUN servers; calls between phones on the
-              same Wi-Fi network usually connect peer-to-peer.
-            </p>
-          </CardContent>
-        </Card>
+        {/* Inline confirm for clear data */}
+        {confirmingClear && (
+          <Card className="border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30">
+            <CardContent className="flex flex-col gap-3 py-4">
+              <p className="text-sm">
+                Delete all messages, voice notes, profile photos, and
+                embeddings on this device? This can&apos;t be undone.
+              </p>
+              <div className="flex gap-2">
+                <Button variant="destructive" size="sm" onClick={clearAllData}>
+                  Delete everything
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setConfirmingClear(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 3. Sign out as the last, prominent action */}
+        <Button
+          onClick={signOut}
+          variant="outline"
+          className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/30"
+        >
+          <LogOut className="size-4" /> Sign out
+        </Button>
       </div>
     </main>
   );
