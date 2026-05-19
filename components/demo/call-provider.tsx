@@ -57,11 +57,11 @@ import { notify, startRingtone, stopRingtone } from "@/lib/demo/notifications";
 import { sendPush } from "@/lib/demo/push";
 import { emit, listen, type BusEvent } from "@/lib/demo/transport";
 
+// One fast STUN keeps ICE candidate trickle small (each candidate is its
+// own Realtime broadcast, so fewer = lower signaling latency). Host
+// candidates already cover same-Wi-Fi calls without needing STUN at all.
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" },
-  { urls: "stun:stun.cloudflare.com:3478" },
-  { urls: "stun:global.stun.twilio.com:3478" },
 ];
 
 export function CallProvider({
@@ -144,7 +144,13 @@ export function CallProvider({
 
   const setupPeerConnection = useCallback(
     (peer: string, callId: string) => {
-      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+      // iceCandidatePoolSize=4 makes the browser pre-gather candidates
+      // before setLocalDescription so the offer/answer is created with
+      // candidates already available, reducing time-to-connect.
+      const pc = new RTCPeerConnection({
+        iceServers: ICE_SERVERS,
+        iceCandidatePoolSize: 4,
+      });
       pcRef.current = pc;
 
       pc.onicecandidate = (e) => {

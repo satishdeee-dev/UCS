@@ -113,20 +113,24 @@ export function DemoApp() {
 
         const sender = event.from;
 
+        // Mark "asked" before the DB read so subsequent messages from
+        // the same peer skip the IndexedDB roundtrip entirely.
         if (!askedAvatarRef.current.has(sender)) {
+          askedAvatarRef.current.add(sender);
           const existing = await db.users.get(sender);
           if (!existing?.avatarBlob) {
-            askedAvatarRef.current.add(sender);
             void emit({ kind: "avatar-request", from: self, to: sender });
           }
         }
 
         if (isGroupId(wire.conversationId)) {
           const groupId = wire.conversationId;
-          const existing = await db.groups.get(groupId);
-          if (!existing && !askedGroupRef.current.has(groupId)) {
+          if (!askedGroupRef.current.has(groupId)) {
             askedGroupRef.current.add(groupId);
-            void emit({ kind: "group-request", from: self, to: sender, groupId });
+            const existing = await db.groups.get(groupId);
+            if (!existing) {
+              void emit({ kind: "group-request", from: self, to: sender, groupId });
+            }
           }
         }
         return;
