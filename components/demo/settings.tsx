@@ -1,14 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Camera, LogOut, Trash2 } from "lucide-react";
+import { Camera, LogOut, Shield, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { clearIdentity } from "@/lib/demo/identity";
 import { blobToBase64 } from "@/lib/demo/encoding";
 import { resizeImageToJpeg } from "@/lib/demo/image";
+import { registerProfile } from "@/lib/demo/profiles";
 import { emit } from "@/lib/demo/transport";
 import { Avatar } from "./avatar";
 import { Logo } from "./logo";
@@ -77,6 +79,7 @@ export function Settings({ self, onSignedOut }: Props) {
         from: self,
         avatar: { base64, type: resized.type },
       });
+      void registerProfile(self, resized);
     } catch (err) {
       setPhotoError(err instanceof Error ? err.message : "Couldn't process image");
     }
@@ -93,6 +96,7 @@ export function Settings({ self, onSignedOut }: Props) {
       lastSeenAt: Date.now(),
     });
     void emit({ kind: "avatar", from: self, avatar: null });
+    void registerProfile(self, null);
   }
 
   return (
@@ -150,6 +154,27 @@ export function Settings({ self, onSignedOut }: Props) {
                 </Button>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+              Admin
+            </span>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2 text-sm">
+            <p className="text-zinc-600 dark:text-zinc-400">
+              Sign in as an admin to see every user that has signed in to
+              CommApp.
+            </p>
+            <Link
+              href="/demo/admin"
+              className="inline-flex w-fit items-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200 dark:hover:bg-indigo-950"
+            >
+              <Shield className="size-4" />
+              Open admin dashboard
+            </Link>
           </CardContent>
         </Card>
 

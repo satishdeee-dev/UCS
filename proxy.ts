@@ -5,11 +5,12 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // /demo is the offline-first demo (no auth). / redirects there.
-  // /api/push is the push backend, also no auth (dummy-phone identity).
+  // /api/push and /api/profile are demo backends, also no Supabase auth.
   if (
     path === "/" ||
     path.startsWith("/demo") ||
-    path.startsWith("/api/push")
+    path.startsWith("/api/push") ||
+    path.startsWith("/api/profile")
   ) {
     return NextResponse.next();
   }

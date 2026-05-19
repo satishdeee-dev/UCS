@@ -18,6 +18,7 @@ import {
   notify,
   playMessageTone,
 } from "@/lib/demo/notifications";
+import { registerProfile } from "@/lib/demo/profiles";
 import { registerPushSubscription, sendPush } from "@/lib/demo/push";
 import { AnimatedBackground } from "./animated-background";
 import { BottomBar, type Tab } from "./bottom-bar";
@@ -245,7 +246,9 @@ export function DemoApp() {
     let cancelled = false;
     (async () => {
       const me = await db.users.get(self);
-      if (cancelled || !me?.avatarBlob) return;
+      if (cancelled) return;
+      void registerProfile(self, me?.avatarBlob ?? undefined);
+      if (!me?.avatarBlob) return;
       const base64 = await blobToBase64(me.avatarBlob);
       void emit({
         kind: "avatar",
