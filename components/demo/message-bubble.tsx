@@ -1,13 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, ExternalLink, FileText, Loader2, MapPin } from "lucide-react";
+import {
+  Download,
+  ExternalLink,
+  FileText,
+  Loader2,
+  MapPin,
+  Star,
+} from "lucide-react";
 import type { LocalAttachment, LocalLocation } from "@/lib/db";
 import { formatBytes } from "@/lib/demo/encoding";
 
 type Common = {
   createdAt: number;
   outgoing: boolean;
+  starred?: boolean;
+  onToggleStar?: () => void;
 };
 
 export type BubbleProps =
@@ -36,8 +45,23 @@ export function MessageBubble(props: BubbleProps) {
   const timeClass = props.outgoing ? "text-amber-100" : "text-zinc-500";
 
   return (
-    <div className={`flex ${props.outgoing ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[75%] rounded-2xl px-3 py-2 ${bubbleClass}`}>
+    <div
+      className={`group flex items-end gap-1.5 ${props.outgoing ? "justify-end" : "justify-start"}`}
+    >
+      {props.outgoing && props.onToggleStar && (
+        <StarButton
+          starred={!!props.starred}
+          onClick={props.onToggleStar}
+          align="right"
+        />
+      )}
+      <div className={`relative max-w-[75%] rounded-2xl px-3 py-2 ${bubbleClass}`}>
+        {props.starred && (
+          <Star
+            className="absolute -top-1.5 -right-1.5 size-3.5 fill-amber-400 text-amber-500 drop-shadow"
+            aria-label="Starred"
+          />
+        )}
         {props.kind === "text" ? (
           <div className="flex flex-col gap-2">
             {props.attachment && (
@@ -67,7 +91,43 @@ export function MessageBubble(props: BubbleProps) {
         )}
         <div className={`mt-1 text-[10px] ${timeClass}`}>{time}</div>
       </div>
+      {!props.outgoing && props.onToggleStar && (
+        <StarButton
+          starred={!!props.starred}
+          onClick={props.onToggleStar}
+          align="left"
+        />
+      )}
     </div>
+  );
+}
+
+function StarButton({
+  starred,
+  onClick,
+  align,
+}: {
+  starred: boolean;
+  onClick: () => void;
+  align: "left" | "right";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={starred ? "Unstar message" : "Star message"}
+      aria-pressed={starred}
+      className={`flex size-7 shrink-0 items-center justify-center rounded-full text-zinc-400 transition-all hover:bg-zinc-200 hover:text-amber-500 dark:hover:bg-zinc-800 ${
+        starred
+          ? "opacity-100"
+          : "opacity-0 group-hover:opacity-100 focus:opacity-100"
+      } ${align === "left" ? "order-2" : ""}`}
+      tabIndex={0}
+    >
+      <Star
+        className={`size-3.5 ${starred ? "fill-amber-400 text-amber-500" : ""}`}
+      />
+    </button>
   );
 }
 

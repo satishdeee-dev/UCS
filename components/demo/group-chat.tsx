@@ -58,6 +58,12 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
     [group, self],
   );
 
+  async function toggleStar(messageId: string) {
+    const m = await db.messages.get(messageId);
+    if (!m) return;
+    await db.messages.update(messageId, { starred: !m.starred });
+  }
+
   async function sendText(body: string) {
     const message: LocalMessage = {
       id: crypto.randomUUID(),
@@ -303,6 +309,8 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
                   location={item.data.location}
                   createdAt={item.data.createdAt}
                   outgoing={outgoing}
+                  starred={item.data.starred}
+                  onToggleStar={() => toggleStar(item.data.id)}
                 />
               ) : (
                 <MessageBubble

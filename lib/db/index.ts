@@ -22,6 +22,7 @@ export interface LocalMessage {
   body: string;
   createdAt: number;
   syncedAt: number | null;
+  starred?: boolean;
   attachment?: LocalAttachment;
   location?: LocalLocation;
 }
