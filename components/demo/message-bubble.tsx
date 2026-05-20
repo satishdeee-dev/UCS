@@ -19,6 +19,12 @@ type Common = {
   outgoing: boolean;
   starred?: boolean;
   onToggleStar?: () => void;
+  /** Receipt state — pass the message's recipients[] + deliveredBy[]
+   *  + readBy[] arrays for accurate group tallying. Falls back to the
+   *  legacy deliveredAt/readAt timestamps for older 1:1 rows. */
+  recipients?: string[];
+  deliveredBy?: string[];
+  readBy?: string[];
   deliveredAt?: number;
   readAt?: number;
 };
@@ -99,6 +105,9 @@ export function MessageBubble(props: BubbleProps) {
           <span>{time}</span>
           {props.outgoing && (
             <ReceiptTicks
+              recipients={props.recipients}
+              deliveredBy={props.deliveredBy}
+              readBy={props.readBy}
               deliveredAt={props.deliveredAt}
               readAt={props.readAt}
             />
@@ -117,30 +126,65 @@ export function MessageBubble(props: BubbleProps) {
 }
 
 function ReceiptTicks({
+  recipients,
+  deliveredBy,
+  readBy,
   deliveredAt,
   readAt,
 }: {
+  recipients?: string[];
+  deliveredBy?: string[];
+  readBy?: string[];
   deliveredAt?: number;
   readAt?: number;
 }) {
-  // Triple state mirrors WhatsApp:
-  // - sent only:        single tick
-  // - delivered:        double tick, same colour
-  // - read by peer:     double tick, blue
-  if (readAt) {
+  // Prefer the array model when available; fall back to legacy 1:1
+  // timestamps for messages written before the array fields existed.
+  const total = recipients?.length;
+  const deliveredCount =
+    deliveredBy?.length ?? (deliveredAt ? 1 : 0);
+  const readCount = readBy?.length ?? (readAt ? 1 : 0);
+
+  // "Read by all" — at least one recipient AND all of them have read.
+  if (total !== undefined && total > 0 && readCount >= total) {
     return (
       <CheckCheck
         className="size-3 text-sky-300"
-        aria-label="Read"
+        aria-label={
+          total > 1 ? `Read by all ${total}` : "Read"
+        }
       />
+    );
+  }
+  // "Delivered to all" — same, but for deliveredBy.
+  if (total !== undefined && total > 0 && deliveredCount >= total) {
+    return (
+      <CheckCheck
+        className="size-3 opacity-70"
+        aria-label={
+          total > 1 ? `Delivered to all ${total}` : "Delivered"
+        }
+      />
+    );
+  }
+  // Partial group state — at least one ack, not yet everyone.
+  if (deliveredCount > 0 && (total ?? 0) > 1) {
+    return (
+      <CheckCheck
+        className="size-3 opacity-40"
+        aria-label={`Delivered to ${deliveredCount}/${total}`}
+      />
+    );
+  }
+  // Single-recipient legacy: keep showing delivered/read on timestamps.
+  if (readAt) {
+    return (
+      <CheckCheck className="size-3 text-sky-300" aria-label="Read" />
     );
   }
   if (deliveredAt) {
     return (
-      <CheckCheck
-        className="size-3 opacity-70"
-        aria-label="Delivered"
-      />
+      <CheckCheck className="size-3 opacity-70" aria-label="Delivered" />
     );
   }
   return <Check className="size-3 opacity-70" aria-label="Sent" />;

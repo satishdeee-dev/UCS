@@ -22,8 +22,17 @@ export interface LocalMessage {
   body: string;
   createdAt: number;
   syncedAt: number | null;
-  deliveredAt?: number; // peer confirmed receipt
-  readAt?: number;      // peer opened the chat
+  /** Recipients other than the sender. Set at send time so the bubble
+   *  can compute "delivered to N/N" without needing group context. */
+  recipients?: string[];
+  /** Phone numbers of recipients who have ack'd receipt. */
+  deliveredBy?: string[];
+  /** Phone numbers of recipients who have opened the chat. */
+  readBy?: string[];
+  /** Legacy 1:1 timestamps — kept for backward compat with rows
+   *  written before the array model. */
+  deliveredAt?: number;
+  readAt?: number;
   starred?: boolean;
   attachment?: LocalAttachment;
   location?: LocalLocation;

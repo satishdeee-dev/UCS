@@ -95,6 +95,9 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
       id: crypto.randomUUID(),
       conversationId,
       senderId: self,
+      recipients: [peer],
+      deliveredBy: [],
+      readBy: [],
       body,
       createdAt: Date.now(),
       syncedAt: null,
@@ -127,6 +130,9 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
       id: crypto.randomUUID(),
       conversationId,
       senderId: self,
+      recipients: [peer],
+      deliveredBy: [],
+      readBy: [],
       body: "",
       createdAt: Date.now(),
       syncedAt: null,
@@ -161,6 +167,9 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
       id: crypto.randomUUID(),
       conversationId,
       senderId: self,
+      recipients: [peer],
+      deliveredBy: [],
+      readBy: [],
       body: "",
       createdAt: Date.now(),
       syncedAt: null,
@@ -330,6 +339,9 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
                 outgoing={item.data.senderId === self}
                 starred={item.data.starred}
                 onToggleStar={() => toggleStar(item.data.id)}
+                recipients={item.data.recipients}
+                deliveredBy={item.data.deliveredBy}
+                readBy={item.data.readBy}
                 deliveredAt={item.data.deliveredAt}
                 readAt={item.data.readAt}
               />

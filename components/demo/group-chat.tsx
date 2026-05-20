@@ -6,6 +6,7 @@ import { ArrowLeft, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { db, type LocalLocation, type LocalMessage, type LocalVoiceNote } from "@/lib/db";
 import { blobToBase64 } from "@/lib/demo/encoding";
+import { readPreferences } from "@/lib/demo/preferences";
 import { sendPush } from "@/lib/demo/push";
 import { emit } from "@/lib/demo/transport";
 import { transcribe, warmTranscriber } from "@/lib/ai/transcribe";
@@ -53,6 +54,34 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
     void warmTranscriber().catch(() => {});
   }, []);
 
+  // Read receipts: emit message-read for every inbound message we
+  // haven't yet acked-read this session. Fans out to every group
+  // member except self so each member's bubble can update its own
+  // readBy[] tally.
+  const readAckedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!items) return;
+    if (!group) return;
+    if (!readPreferences().showReadReceipts) return;
+    const now = Date.now();
+    const others = group.members.filter((m) => m !== self);
+    for (const item of items) {
+      if (item.kind !== "text") continue;
+      if (item.data.senderId === self) continue;
+      if (readAckedRef.current.has(item.data.id)) continue;
+      readAckedRef.current.add(item.data.id);
+      for (const to of others) {
+        void emit({
+          kind: "message-read",
+          from: self,
+          to,
+          messageId: item.data.id,
+          readAt: now,
+        });
+      }
+    }
+  }, [items, group, self]);
+
   const recipients = useMemo(
     () => (group?.members ?? []).filter((m) => m !== self),
     [group, self],
@@ -69,6 +98,9 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
       id: crypto.randomUUID(),
       conversationId: groupId,
       senderId: self,
+      recipients,
+      deliveredBy: [],
+      readBy: [],
       body,
       createdAt: Date.now(),
       syncedAt: null,
@@ -103,6 +135,9 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
       id: crypto.randomUUID(),
       conversationId: groupId,
       senderId: self,
+      recipients,
+      deliveredBy: [],
+      readBy: [],
       body: "",
       createdAt: Date.now(),
       syncedAt: null,
@@ -139,6 +174,9 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
       id: crypto.randomUUID(),
       conversationId: groupId,
       senderId: self,
+      recipients,
+      deliveredBy: [],
+      readBy: [],
       body: "",
       createdAt: Date.now(),
       syncedAt: null,
@@ -311,6 +349,11 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
                   outgoing={outgoing}
                   starred={item.data.starred}
                   onToggleStar={() => toggleStar(item.data.id)}
+                  recipients={item.data.recipients}
+                  deliveredBy={item.data.deliveredBy}
+                  readBy={item.data.readBy}
+                  deliveredAt={item.data.deliveredAt}
+                  readAt={item.data.readAt}
                 />
               ) : (
                 <MessageBubble

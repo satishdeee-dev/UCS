@@ -93,18 +93,17 @@ export function DemoApp() {
         };
         void db.messages.put(local);
 
-        // 1:1 messages get a delivery acknowledgement back to the sender
-        // so their bubble flips from single to double tick. Groups skip
-        // this — too many acks for fan-out, no UI for per-member state.
-        if (!isGroupId(wire.conversationId)) {
-          void emit({
-            kind: "message-ack",
-            from: self,
-            to: event.from,
-            messageId: wire.id,
-            deliveredAt: Date.now(),
-          });
-        }
+        // Every inbound message — 1:1 or group — gets a delivery ack
+        // back to the sender so their bubble's deliveredBy[] tally
+        // ticks up. Group bubbles show "delivered to all" once N acks
+        // have arrived.
+        void emit({
+          kind: "message-ack",
+          from: self,
+          to: event.from,
+          messageId: wire.id,
+          deliveredAt: Date.now(),
+        });
 
         // Notify + chime when this device isn't actively viewing the chat.
         const isGroup = isGroupId(wire.conversationId);
@@ -259,8 +258,14 @@ export function DemoApp() {
 
       if (event.kind === "message-ack") {
         if (event.to !== self) return;
+        const m = await db.messages.get(event.messageId);
+        if (!m) return;
+        const deliveredBy = new Set(m.deliveredBy ?? []);
+        deliveredBy.add(event.from);
         await db.messages.update(event.messageId, {
-          deliveredAt: event.deliveredAt,
+          deliveredBy: Array.from(deliveredBy),
+          // Keep legacy single-timestamp in sync with first ack.
+          deliveredAt: m.deliveredAt ?? event.deliveredAt,
         });
         return;
       }
@@ -271,8 +276,13 @@ export function DemoApp() {
         // turned them off (symmetric — if I don't send them, I don't
         // see them either).
         if (!readPreferences().showReadReceipts) return;
+        const m = await db.messages.get(event.messageId);
+        if (!m) return;
+        const readBy = new Set(m.readBy ?? []);
+        readBy.add(event.from);
         await db.messages.update(event.messageId, {
-          readAt: event.readAt,
+          readBy: Array.from(readBy),
+          readAt: m.readAt ?? event.readAt,
         });
         return;
       }
