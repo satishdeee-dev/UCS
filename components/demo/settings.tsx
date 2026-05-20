@@ -847,7 +847,12 @@ function HelpSection({ onBack }: { onBack: () => void }) {
         <CardContent className="flex items-center gap-3 py-5">
           <Logo size={56} />
           <div className="flex flex-col">
-            <span className="text-xl font-bold tracking-tight">CommApp</span>
+            <span className="text-xl font-bold tracking-tight">
+              Comm
+              <span className="bg-gradient-to-br from-blue-400 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
+                App
+              </span>
+            </span>
             <span className="text-xs text-zinc-500">version {VERSION}</span>
           </div>
         </CardContent>

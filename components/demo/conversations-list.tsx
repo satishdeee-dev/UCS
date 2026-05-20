@@ -153,7 +153,10 @@ export function ConversationsList({
         <Logo size={40} />
         <div className="flex flex-col">
           <span className="text-xl font-bold leading-tight tracking-tight">
-            CommApp
+            Comm
+            <span className="bg-gradient-to-br from-blue-400 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
+              App
+            </span>
           </span>
           <span className="font-mono text-[10px] text-zinc-500">{self}</span>
         </div>

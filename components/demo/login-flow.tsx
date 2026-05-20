@@ -42,7 +42,12 @@ export function LoginFlow({ onSignedIn }: { onSignedIn: (phone: string) => void 
       <AnimatedBackground />
       <div className="relative z-10 mb-6 flex flex-col items-center gap-3">
         <Logo size={72} />
-        <h1 className="text-3xl font-bold tracking-tight">CommApp</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Comm
+          <span className="bg-gradient-to-br from-blue-400 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
+            App
+          </span>
+        </h1>
         <p className="text-center text-sm text-zinc-500">
           Offline-first messaging and calls — works without a network.
         </p>

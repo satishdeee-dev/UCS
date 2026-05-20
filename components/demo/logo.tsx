@@ -4,14 +4,15 @@ interface LogoProps {
 }
 
 /**
- * App logo: blue gradient tile with a stylised white letterform.
+ * App logo: chat bubble with three WiFi-style signal arcs above it, in
+ * a cyan → blue → purple gradient. Designed to read on dark backgrounds.
  *
- * Drop a higher-fidelity PNG at /public/app-logo.png and swap the inner
- * SVG for `<img src="/app-logo.png" />` if you want the exact uploaded
- * artwork.
+ * If you want to use the raw PNG instead, drop it at /public/app-logo.png
+ * and replace the inner <svg> with:
+ *   <img src="/app-logo.png" alt="CommApp" width={size} height={size} />
  */
 export function Logo({ size = 40, className }: LogoProps) {
-  const bgId = "commapp-logo-bg";
+  const gradId = "commapp-logo-grad";
   return (
     <svg
       viewBox="0 0 100 100"
@@ -25,48 +26,74 @@ export function Logo({ size = 40, className }: LogoProps) {
     >
       <defs>
         <linearGradient
-          id={bgId}
-          x1="0%"
-          y1="100%"
-          x2="100%"
-          y2="0%"
+          id={gradId}
+          x1="20"
+          y1="10"
+          x2="85"
+          y2="92"
+          gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0%" stopColor="#1e3a8a" />
-          <stop offset="55%" stopColor="#2563eb" />
-          <stop offset="100%" stopColor="#38bdf8" />
+          <stop offset="0%" stopColor="#22d3ee" />
+          <stop offset="45%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#a855f7" />
         </linearGradient>
       </defs>
 
-      <rect width="100" height="100" rx="14" fill={`url(#${bgId})`} />
-
-      {/* Stylised letterform: two stacked round bumps joined by a sharp
-          diagonal stroke, like the uploaded mark. */}
+      {/* Signal arcs (largest outermost, smallest closest to bubble) */}
       <path
-        d="M 30 16
-           L 62 16
-           A 16 16 0 0 1 78 32
-           A 16 16 0 0 1 62 48
-           L 34 48
-           L 62 52
-           A 16 16 0 0 1 78 68
-           A 16 16 0 0 1 62 84
-           L 30 84"
-        stroke="#ffffff"
-        strokeWidth="7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d="M 22 38 A 28 28 0 0 1 78 38"
+        stroke={`url(#${gradId})`}
+        strokeWidth="5"
         fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M 32 40 A 18 18 0 0 1 68 40"
+        stroke={`url(#${gradId})`}
+        strokeWidth="5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M 42 41 A 8 8 0 0 1 58 41"
+        stroke={`url(#${gradId})`}
+        strokeWidth="4.5"
+        fill="none"
+        strokeLinecap="round"
+      />
+
+      {/* Chat bubble with bottom-left tail */}
+      <path
+        d="M 30 51
+           Q 30 44 37 44
+           L 63 44
+           Q 70 44 70 51
+           L 70 77
+           Q 70 84 63 84
+           L 46 84
+           L 32 94
+           L 37 84
+           Q 30 84 30 77
+           Z"
+        fill={`url(#${gradId})`}
       />
     </svg>
   );
 }
 
+/**
+ * Two-tone wordmark — "Comm" in foreground white, "App" in the gradient
+ * accent — mirrors the uploaded artwork.
+ */
 export function Wordmark({ className }: { className?: string }) {
   return (
     <div className={`flex items-center gap-2.5 ${className ?? ""}`}>
       <Logo size={36} />
-      <span className="bg-gradient-to-br from-sky-300 via-blue-400 to-blue-600 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
-        CommApp
+      <span className="text-2xl font-bold tracking-tight">
+        <span className="text-foreground">Comm</span>
+        <span className="bg-gradient-to-br from-blue-400 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
+          App
+        </span>
       </span>
     </div>
   );
