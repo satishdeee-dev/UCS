@@ -127,7 +127,7 @@ export function Settings({ self, onSignedOut }: Props) {
             <button
               type="button"
               onClick={openFilePicker}
-              className="group relative rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2"
+              className="group relative rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2"
               aria-label="Change profile photo"
             >
               <Avatar phone={self} size={112} />

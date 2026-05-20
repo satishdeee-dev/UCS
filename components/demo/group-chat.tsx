@@ -255,7 +255,7 @@ export function GroupChat({ self, groupId, onBack, onOpenProfile }: Props) {
           onClick={onOpenProfile}
           className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-0.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
         >
-          <div className="flex size-9 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/70 dark:text-indigo-200">
+          <div className="flex size-9 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/70 dark:text-amber-200">
             <Users className="size-4" />
           </div>
           <div className="flex min-w-0 flex-1 flex-col">

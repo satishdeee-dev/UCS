@@ -112,7 +112,7 @@ function CategoryTab({
       title={label}
       className={`flex flex-1 items-center justify-center py-1.5 text-base transition-colors ${
         active
-          ? "border-b-2 border-indigo-600 bg-white dark:border-indigo-400 dark:bg-zinc-950"
+          ? "border-b-2 border-amber-600 bg-white dark:border-amber-400 dark:bg-zinc-950"
           : "border-b-2 border-transparent hover:bg-white/60 dark:hover:bg-zinc-950/60"
       }`}
     >

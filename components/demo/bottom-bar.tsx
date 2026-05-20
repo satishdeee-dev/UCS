@@ -28,7 +28,7 @@ export function BottomBar({ active, onChange }: Props) {
             onClick={() => onChange(tab.id)}
             className={`relative flex flex-1 flex-col items-center gap-0.5 px-3 pb-2 pt-2.5 text-[11px] font-medium transition-colors ${
               isActive
-                ? "text-indigo-600 dark:text-indigo-300"
+                ? "text-amber-600 dark:text-amber-300"
                 : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200"
             }`}
             aria-pressed={isActive}
@@ -36,7 +36,7 @@ export function BottomBar({ active, onChange }: Props) {
             <span
               className={`flex size-9 items-center justify-center rounded-full transition-all ${
                 isActive
-                  ? "bg-indigo-100 dark:bg-indigo-950/60"
+                  ? "bg-amber-100 dark:bg-amber-950/60"
                   : ""
               }`}
             >

@@ -163,7 +163,7 @@ function LoginScreen({
       <Card className="relative z-10 w-full max-w-sm bg-card/95 backdrop-blur-sm">
         <CardHeader>
           <h2 className="flex items-center gap-2 text-sm font-medium">
-            <Shield className="size-4 text-indigo-600" />
+            <Shield className="size-4 text-amber-600" />
             Admin sign in
           </h2>
         </CardHeader>
@@ -251,7 +251,7 @@ function RosterScreen({
           <ArrowLeft className="size-4" /> Demo
         </Link>
         <div className="flex flex-1 items-center gap-2">
-          <Shield className="size-4 text-indigo-600" />
+          <Shield className="size-4 text-amber-600" />
           <h1 className="text-base font-semibold tracking-tight">
             CommApp users
           </h1>
@@ -265,9 +265,9 @@ function RosterScreen({
       </header>
 
       <div className="flex flex-col gap-3 border-b bg-card px-4 py-3">
-        <Card className="border-indigo-200 bg-indigo-50/50 dark:border-indigo-900/50 dark:bg-indigo-950/30">
+        <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/30">
           <CardContent className="flex items-center gap-3 py-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-600 text-white">
               <Shield className="size-5" />
             </div>
             <div className="flex flex-1 flex-col">
@@ -276,7 +276,7 @@ function RosterScreen({
                 {state.admin.username}
               </span>
             </div>
-            <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-white">
+            <span className="rounded-full bg-amber-600 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-white">
               Admin
             </span>
           </CardContent>
@@ -384,7 +384,7 @@ function ProfileRowView({ profile }: { profile: ProfileRow }) {
               className="size-10 rounded-full object-cover"
             />
           ) : (
-            <div className="flex size-10 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 dark:bg-indigo-900/70 dark:text-indigo-200">
+            <div className="flex size-10 items-center justify-center rounded-full bg-amber-100 text-sm font-semibold text-amber-700 dark:bg-amber-900/70 dark:text-amber-200">
               <User className="size-4" aria-hidden />
               <span className="sr-only">{initials}</span>
             </div>

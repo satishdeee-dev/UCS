@@ -122,7 +122,7 @@ export function NewGroupDialog({ self, onCancel, onCreate }: Props) {
                     disabled={included}
                     className={`rounded-full border px-2.5 py-1 text-xs font-mono transition-colors ${
                       included
-                        ? "border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-200"
+                        ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
                         : "border-zinc-200 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
                     }`}
                   >
@@ -143,7 +143,7 @@ export function NewGroupDialog({ self, onCancel, onCreate }: Props) {
             {members.map((m) => (
               <span
                 key={m}
-                className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-mono text-indigo-700 dark:bg-indigo-900/70 dark:text-indigo-200"
+                className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-mono text-amber-700 dark:bg-amber-900/70 dark:text-amber-200"
               >
                 {m === self ? `${m} (you)` : m}
                 {m !== self && (

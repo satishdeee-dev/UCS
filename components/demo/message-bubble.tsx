@@ -30,10 +30,10 @@ export function MessageBubble(props: BubbleProps) {
   });
 
   const bubbleClass = props.outgoing
-    ? "rounded-br-sm bg-indigo-600 text-white"
+    ? "rounded-br-sm bg-amber-600 text-white"
     : "rounded-bl-sm bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100";
 
-  const timeClass = props.outgoing ? "text-indigo-100" : "text-zinc-500";
+  const timeClass = props.outgoing ? "text-amber-100" : "text-zinc-500";
 
   return (
     <div className={`flex ${props.outgoing ? "justify-end" : "justify-start"}`}>
@@ -182,7 +182,7 @@ function VoiceContent({
     return () => URL.revokeObjectURL(u);
   }, [audioBlob]);
 
-  const captionClass = outgoing ? "text-indigo-100" : "text-zinc-500";
+  const captionClass = outgoing ? "text-amber-100" : "text-zinc-500";
 
   return (
     <div className="flex flex-col gap-1">

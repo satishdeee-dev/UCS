@@ -44,7 +44,7 @@ export function Avatar({ phone, size = 40, className }: Props) {
   return (
     <div
       style={{ ...style, fontSize: size * 0.36 }}
-      className={`flex shrink-0 items-center justify-center rounded-full bg-indigo-100 font-semibold text-indigo-700 dark:bg-indigo-900/70 dark:text-indigo-200 ${className ?? ""}`}
+      className={`flex shrink-0 items-center justify-center rounded-full bg-amber-100 font-semibold text-amber-700 dark:bg-amber-900/70 dark:text-amber-200 ${className ?? ""}`}
     >
       {initials}
     </div>

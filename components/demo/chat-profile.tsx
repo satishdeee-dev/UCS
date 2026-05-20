@@ -104,7 +104,7 @@ export function ChatProfile({ self, target, onBack }: Props) {
         <Card>
           <CardContent className="flex flex-col items-center gap-3 pt-6">
             {isGroup ? (
-              <div className="flex size-24 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/70 dark:text-indigo-200">
+              <div className="flex size-24 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/70 dark:text-amber-200">
                 <Users className="size-10" />
               </div>
             ) : (
@@ -144,7 +144,7 @@ export function ChatProfile({ self, target, onBack }: Props) {
                     {m === self ? `${m} (you)` : m}
                   </span>
                   {m === group.createdBy && (
-                    <span className="ml-auto rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-900/70 dark:text-indigo-200">
+                    <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/70 dark:text-amber-200">
                       Creator
                     </span>
                   )}
@@ -169,7 +169,7 @@ export function ChatProfile({ self, target, onBack }: Props) {
                   onClick={() => setWp(preset.id)}
                   className={`group flex flex-col items-center gap-1 rounded-md border p-2 transition-all ${
                     wallpaper === preset.id
-                      ? "border-indigo-500 ring-2 ring-indigo-500/40"
+                      ? "border-amber-500 ring-2 ring-amber-500/40"
                       : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600"
                   }`}
                   aria-pressed={wallpaper === preset.id}
@@ -226,7 +226,7 @@ export function ChatProfile({ self, target, onBack }: Props) {
                   rel="noreferrer"
                   className="flex items-center gap-2 truncate rounded-md px-2 py-1.5 text-xs hover:bg-zinc-50 dark:hover:bg-zinc-900"
                 >
-                  <ExternalLink className="size-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                  <ExternalLink className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
                   <span className="truncate">{l.url}</span>
                 </a>
               ))

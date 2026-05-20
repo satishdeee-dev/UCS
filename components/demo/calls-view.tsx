@@ -92,7 +92,7 @@ function CallRow({
     <li>
       <button
         onClick={onClick}
-        className="flex w-full items-center gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30"
+        className="flex w-full items-center gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-amber-50/60 dark:hover:bg-amber-950/30"
       >
         <Avatar phone={call.peer} size={40} />
         <div className="flex min-w-0 flex-1 flex-col">

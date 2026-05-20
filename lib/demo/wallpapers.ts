@@ -24,10 +24,10 @@ export const WALLPAPERS: WallpaperPreset[] = [
     id: "default",
     label: "Default",
     bgImage:
-      "radial-gradient(circle at 1px 1px, rgba(99,102,241,0.18) 1px, transparent 0)",
+      "radial-gradient(circle at 1px 1px, rgba(251,191,36,0.18) 1px, transparent 0)",
     bgSize: "22px 22px",
     thumb:
-      "radial-gradient(circle at 1px 1px, rgba(99,102,241,0.55) 1px, transparent 0) 0 0 / 8px 8px #1c1b2e",
+      "radial-gradient(circle at 1px 1px, rgba(251,191,36,0.55) 1px, transparent 0) 0 0 / 8px 8px #0f172a",
   },
   {
     id: "plain",
@@ -56,10 +56,10 @@ export const WALLPAPERS: WallpaperPreset[] = [
     id: "doodle",
     label: "Doodle",
     bgImage:
-      "repeating-linear-gradient(45deg, rgba(99,102,241,0.14) 0 2px, transparent 2px 14px)",
+      "repeating-linear-gradient(45deg, rgba(34,211,238,0.18) 0 2px, transparent 2px 14px)",
     bgSize: "20px 20px",
     thumb:
-      "repeating-linear-gradient(45deg, rgba(99,102,241,0.55) 0 1.5px, transparent 1.5px 8px) #1c1b2e",
+      "repeating-linear-gradient(45deg, rgba(34,211,238,0.55) 0 1.5px, transparent 1.5px 8px) #0f172a",
   },
 ];
 

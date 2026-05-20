@@ -4,9 +4,9 @@ interface LogoProps {
 }
 
 export function Logo({ size = 40, className }: LogoProps) {
-  const bgId = "commapp-logo-bg";
-  const bubbleId = "commapp-logo-bubble";
-  const shineId = "commapp-logo-shine";
+  const hexBgId = "commapp-hex-bg";
+  const emblemId = "commapp-emblem";
+  const glowId = "commapp-glow";
   return (
     <svg
       viewBox="0 0 48 48"
@@ -20,56 +20,79 @@ export function Logo({ size = 40, className }: LogoProps) {
     >
       <defs>
         <linearGradient
-          id={bgId}
+          id={hexBgId}
           x1="0"
           y1="0"
           x2="48"
           y2="48"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stopColor="#a5b4fc" />
-          <stop offset="0.45" stopColor="#6366f1" />
-          <stop offset="1" stopColor="#4338ca" />
+          <stop stopColor="#1e293b" />
+          <stop offset="0.55" stopColor="#0f172a" />
+          <stop offset="1" stopColor="#020617" />
         </linearGradient>
         <linearGradient
-          id={bubbleId}
+          id={emblemId}
           x1="14"
-          y1="14"
+          y1="10"
           x2="34"
-          y2="34"
+          y2="38"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stopColor="#ffffff" />
-          <stop offset="1" stopColor="#e0e7ff" />
+          <stop stopColor="#fde68a" />
+          <stop offset="0.45" stopColor="#fbbf24" />
+          <stop offset="1" stopColor="#f97316" />
         </linearGradient>
-        <radialGradient
-          id={shineId}
-          cx="0.3"
-          cy="0.2"
-          r="0.9"
-          gradientUnits="objectBoundingBox"
+        <filter
+          id={glowId}
+          x="-50%"
+          y="-50%"
+          width="200%"
+          height="200%"
         >
-          <stop offset="0" stopColor="white" stopOpacity="0.35" />
-          <stop offset="1" stopColor="white" stopOpacity="0" />
-        </radialGradient>
+          <feGaussianBlur stdDeviation="1.2" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
 
-      {/* Rounded-square base with indigo gradient */}
-      <rect width="48" height="48" rx="12" fill={`url(#${bgId})`} />
-
-      {/* Soft top-left highlight for depth */}
-      <rect width="48" height="48" rx="12" fill={`url(#${shineId})`} />
-
-      {/* Chat bubble with subtle gradient inside */}
-      <path
-        d="M14 19c0-2.761 2.239-5 5-5h10c2.761 0 5 2.239 5 5v6c0 2.761-2.239 5-5 5h-4.5l-5 4v-4h-0.5c-2.761 0-5-2.239-5-5v-6z"
-        fill={`url(#${bubbleId})`}
+      {/* Hexagonal mech-shield base */}
+      <polygon
+        points="24,3 42.5,13 42.5,35 24,45 5.5,35 5.5,13"
+        fill={`url(#${hexBgId})`}
+        stroke="#334155"
+        strokeWidth="1"
       />
 
-      {/* Three dots — typing / conversation cue */}
-      <circle cx="19.5" cy="22" r="1.5" fill="#4f46e5" />
-      <circle cx="24" cy="22" r="1.5" fill="#4f46e5" />
-      <circle cx="28.5" cy="22" r="1.5" fill="#4f46e5" />
+      {/* Inner hex outline for layered depth */}
+      <polygon
+        points="24,8 38,16 38,32 24,40 10,32 10,16"
+        fill="none"
+        stroke="rgba(251,191,36,0.18)"
+        strokeWidth="0.8"
+      />
+
+      {/* Twin-chevron emblem (Autobot-vibe, not the logo) */}
+      <path
+        d="M14 24 L24 16 L34 24 L24 22.5 Z"
+        fill={`url(#${emblemId})`}
+        filter={`url(#${glowId})`}
+      />
+      <path
+        d="M16 30 L24 24 L32 30 L24 28.5 Z"
+        fill={`url(#${emblemId})`}
+        opacity="0.85"
+      />
+
+      {/* Energy core */}
+      <circle cx="24" cy="22.5" r="1.4" fill="#fef9c3" />
+      <circle cx="24" cy="22.5" r="2.4" fill="#fef9c3" opacity="0.35" />
+
+      {/* Side energy ports */}
+      <circle cx="9" cy="24" r="0.9" fill="#22d3ee" opacity="0.7" />
+      <circle cx="39" cy="24" r="0.9" fill="#22d3ee" opacity="0.7" />
     </svg>
   );
 }
@@ -78,7 +101,7 @@ export function Wordmark({ className }: { className?: string }) {
   return (
     <div className={`flex items-center gap-2 ${className ?? ""}`}>
       <Logo size={28} />
-      <span className="bg-gradient-to-br from-indigo-300 via-indigo-400 to-violet-400 bg-clip-text text-lg font-semibold tracking-tight text-transparent">
+      <span className="bg-gradient-to-br from-amber-300 via-amber-400 to-orange-500 bg-clip-text text-lg font-semibold tracking-tight text-transparent">
         CommApp
       </span>
     </div>
