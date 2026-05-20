@@ -18,6 +18,7 @@ import {
   notify,
   playMessageTone,
 } from "@/lib/demo/notifications";
+import { readPreferences } from "@/lib/demo/preferences";
 import { registerProfile } from "@/lib/demo/profiles";
 import { registerPushSubscription, sendPush } from "@/lib/demo/push";
 import { AnimatedBackground } from "./animated-background";
@@ -91,6 +92,19 @@ export function DemoApp() {
           location: wire.location,
         };
         void db.messages.put(local);
+
+        // 1:1 messages get a delivery acknowledgement back to the sender
+        // so their bubble flips from single to double tick. Groups skip
+        // this — too many acks for fan-out, no UI for per-member state.
+        if (!isGroupId(wire.conversationId)) {
+          void emit({
+            kind: "message-ack",
+            from: self,
+            to: event.from,
+            messageId: wire.id,
+            deliveredAt: Date.now(),
+          });
+        }
 
         // Notify + chime when this device isn't actively viewing the chat.
         const isGroup = isGroupId(wire.conversationId);
@@ -239,6 +253,26 @@ export function DemoApp() {
         if (event.to !== self) return;
         await db.voiceNotes.update(event.voiceNoteId, {
           transcript: event.transcript,
+        });
+        return;
+      }
+
+      if (event.kind === "message-ack") {
+        if (event.to !== self) return;
+        await db.messages.update(event.messageId, {
+          deliveredAt: event.deliveredAt,
+        });
+        return;
+      }
+
+      if (event.kind === "message-read") {
+        if (event.to !== self) return;
+        // Respect privacy: ignore inbound read receipts if the user has
+        // turned them off (symmetric — if I don't send them, I don't
+        // see them either).
+        if (!readPreferences().showReadReceipts) return;
+        await db.messages.update(event.messageId, {
+          readAt: event.readAt,
         });
         return;
       }

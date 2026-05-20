@@ -8,6 +8,7 @@ import { db, type LocalLocation, type LocalMessage, type LocalVoiceNote } from "
 import { conversationIdFor } from "@/lib/demo/conversations";
 import { transcribe, warmTranscriber } from "@/lib/ai/transcribe";
 import { blobToBase64 } from "@/lib/demo/encoding";
+import { readPreferences } from "@/lib/demo/preferences";
 import { sendPush } from "@/lib/demo/push";
 import { emit } from "@/lib/demo/transport";
 import { getWallpaperStyle, useWallpaper } from "@/lib/demo/wallpapers";
@@ -59,6 +60,29 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
   useEffect(() => {
     void warmTranscriber().catch(() => {});
   }, []);
+
+  // Read receipts: every time the chat is open and a message arrives
+  // from the peer, mark it as read locally + emit message-read so the
+  // sender's bubble flips to the blue double tick.
+  const readAckedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!items) return;
+    if (!readPreferences().showReadReceipts) return;
+    const now = Date.now();
+    for (const item of items) {
+      if (item.kind !== "text") continue;
+      if (item.data.senderId === self) continue; // only inbound messages
+      if (readAckedRef.current.has(item.data.id)) continue;
+      readAckedRef.current.add(item.data.id);
+      void emit({
+        kind: "message-read",
+        from: self,
+        to: peer,
+        messageId: item.data.id,
+        readAt: now,
+      });
+    }
+  }, [items, self, peer]);
 
   async function toggleStar(messageId: string) {
     const m = await db.messages.get(messageId);
@@ -306,6 +330,8 @@ export function Chat({ self, peer, onBack, onOpenProfile }: Props) {
                 outgoing={item.data.senderId === self}
                 starred={item.data.starred}
                 onToggleStar={() => toggleStar(item.data.id)}
+                deliveredAt={item.data.deliveredAt}
+                readAt={item.data.readAt}
               />
             );
           }

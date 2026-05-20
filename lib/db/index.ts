@@ -22,6 +22,8 @@ export interface LocalMessage {
   body: string;
   createdAt: number;
   syncedAt: number | null;
+  deliveredAt?: number; // peer confirmed receipt
+  readAt?: number;      // peer opened the chat
   starred?: boolean;
   attachment?: LocalAttachment;
   location?: LocalLocation;

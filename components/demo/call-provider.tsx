@@ -366,7 +366,9 @@ export function CallProvider({
         msg.kind === "group-created" ||
         msg.kind === "group-request" ||
         msg.kind === "voice-note" ||
-        msg.kind === "voice-transcript"
+        msg.kind === "voice-transcript" ||
+        msg.kind === "message-ack" ||
+        msg.kind === "message-read"
       ) {
         return;
       }

@@ -102,6 +102,20 @@ export type BusEvent =
       to: string;
       voiceNoteId: string;
       transcript: string;
+    }
+  | {
+      kind: "message-ack";
+      from: string;
+      to: string;
+      messageId: string;
+      deliveredAt: number;
+    }
+  | {
+      kind: "message-read";
+      from: string;
+      to: string;
+      messageId: string;
+      readAt: number;
     };
 
 export interface WireVoiceNote {

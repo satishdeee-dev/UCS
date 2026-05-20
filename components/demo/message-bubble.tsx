@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import {
+  Check,
+  CheckCheck,
   Download,
   ExternalLink,
   FileText,
@@ -17,6 +19,8 @@ type Common = {
   outgoing: boolean;
   starred?: boolean;
   onToggleStar?: () => void;
+  deliveredAt?: number;
+  readAt?: number;
 };
 
 export type BubbleProps =
@@ -89,7 +93,17 @@ export function MessageBubble(props: BubbleProps) {
             outgoing={props.outgoing}
           />
         )}
-        <div className={`mt-1 text-[10px] ${timeClass}`}>{time}</div>
+        <div
+          className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${timeClass}`}
+        >
+          <span>{time}</span>
+          {props.outgoing && (
+            <ReceiptTicks
+              deliveredAt={props.deliveredAt}
+              readAt={props.readAt}
+            />
+          )}
+        </div>
       </div>
       {!props.outgoing && props.onToggleStar && (
         <StarButton
@@ -100,6 +114,36 @@ export function MessageBubble(props: BubbleProps) {
       )}
     </div>
   );
+}
+
+function ReceiptTicks({
+  deliveredAt,
+  readAt,
+}: {
+  deliveredAt?: number;
+  readAt?: number;
+}) {
+  // Triple state mirrors WhatsApp:
+  // - sent only:        single tick
+  // - delivered:        double tick, same colour
+  // - read by peer:     double tick, blue
+  if (readAt) {
+    return (
+      <CheckCheck
+        className="size-3 text-sky-300"
+        aria-label="Read"
+      />
+    );
+  }
+  if (deliveredAt) {
+    return (
+      <CheckCheck
+        className="size-3 opacity-70"
+        aria-label="Delivered"
+      />
+    );
+  }
+  return <Check className="size-3 opacity-70" aria-label="Sent" />;
 }
 
 function StarButton({
