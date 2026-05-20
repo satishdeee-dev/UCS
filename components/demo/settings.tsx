@@ -845,9 +845,9 @@ function HelpSection({ onBack }: { onBack: () => void }) {
     <SectionShell title="Help" onBack={onBack}>
       <Card>
         <CardContent className="flex items-center gap-3 py-5">
-          <Logo size={44} />
+          <Logo size={56} />
           <div className="flex flex-col">
-            <span className="text-base font-semibold">CommApp</span>
+            <span className="text-xl font-bold tracking-tight">CommApp</span>
             <span className="text-xs text-zinc-500">version {VERSION}</span>
           </div>
         </CardContent>

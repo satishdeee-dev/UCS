@@ -3,13 +3,18 @@ interface LogoProps {
   className?: string;
 }
 
+/**
+ * App logo: blue gradient tile with a stylised white letterform.
+ *
+ * Drop a higher-fidelity PNG at /public/app-logo.png and swap the inner
+ * SVG for `<img src="/app-logo.png" />` if you want the exact uploaded
+ * artwork.
+ */
 export function Logo({ size = 40, className }: LogoProps) {
-  const hexBgId = "commapp-hex-bg";
-  const emblemId = "commapp-emblem";
-  const glowId = "commapp-glow";
+  const bgId = "commapp-logo-bg";
   return (
     <svg
-      viewBox="0 0 48 48"
+      viewBox="0 0 100 100"
       width={size}
       height={size}
       className={className}
@@ -20,88 +25,47 @@ export function Logo({ size = 40, className }: LogoProps) {
     >
       <defs>
         <linearGradient
-          id={hexBgId}
-          x1="0"
-          y1="0"
-          x2="48"
-          y2="48"
-          gradientUnits="userSpaceOnUse"
+          id={bgId}
+          x1="0%"
+          y1="100%"
+          x2="100%"
+          y2="0%"
         >
-          <stop stopColor="#1e293b" />
-          <stop offset="0.55" stopColor="#0f172a" />
-          <stop offset="1" stopColor="#020617" />
+          <stop offset="0%" stopColor="#1e3a8a" />
+          <stop offset="55%" stopColor="#2563eb" />
+          <stop offset="100%" stopColor="#38bdf8" />
         </linearGradient>
-        <linearGradient
-          id={emblemId}
-          x1="14"
-          y1="10"
-          x2="34"
-          y2="38"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#fde68a" />
-          <stop offset="0.45" stopColor="#fbbf24" />
-          <stop offset="1" stopColor="#f97316" />
-        </linearGradient>
-        <filter
-          id={glowId}
-          x="-50%"
-          y="-50%"
-          width="200%"
-          height="200%"
-        >
-          <feGaussianBlur stdDeviation="1.2" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
       </defs>
 
-      {/* Hexagonal mech-shield base */}
-      <polygon
-        points="24,3 42.5,13 42.5,35 24,45 5.5,35 5.5,13"
-        fill={`url(#${hexBgId})`}
-        stroke="#334155"
-        strokeWidth="1"
-      />
+      <rect width="100" height="100" rx="14" fill={`url(#${bgId})`} />
 
-      {/* Inner hex outline for layered depth */}
-      <polygon
-        points="24,8 38,16 38,32 24,40 10,32 10,16"
+      {/* Stylised letterform: two stacked round bumps joined by a sharp
+          diagonal stroke, like the uploaded mark. */}
+      <path
+        d="M 30 16
+           L 62 16
+           A 16 16 0 0 1 78 32
+           A 16 16 0 0 1 62 48
+           L 34 48
+           L 62 52
+           A 16 16 0 0 1 78 68
+           A 16 16 0 0 1 62 84
+           L 30 84"
+        stroke="#ffffff"
+        strokeWidth="7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
         fill="none"
-        stroke="rgba(251,191,36,0.18)"
-        strokeWidth="0.8"
       />
-
-      {/* Twin-chevron emblem (Autobot-vibe, not the logo) */}
-      <path
-        d="M14 24 L24 16 L34 24 L24 22.5 Z"
-        fill={`url(#${emblemId})`}
-        filter={`url(#${glowId})`}
-      />
-      <path
-        d="M16 30 L24 24 L32 30 L24 28.5 Z"
-        fill={`url(#${emblemId})`}
-        opacity="0.85"
-      />
-
-      {/* Energy core */}
-      <circle cx="24" cy="22.5" r="1.4" fill="#fef9c3" />
-      <circle cx="24" cy="22.5" r="2.4" fill="#fef9c3" opacity="0.35" />
-
-      {/* Side energy ports */}
-      <circle cx="9" cy="24" r="0.9" fill="#22d3ee" opacity="0.7" />
-      <circle cx="39" cy="24" r="0.9" fill="#22d3ee" opacity="0.7" />
     </svg>
   );
 }
 
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <div className={`flex items-center gap-2 ${className ?? ""}`}>
-      <Logo size={28} />
-      <span className="bg-gradient-to-br from-amber-300 via-amber-400 to-orange-500 bg-clip-text text-lg font-semibold tracking-tight text-transparent">
+    <div className={`flex items-center gap-2.5 ${className ?? ""}`}>
+      <Logo size={36} />
+      <span className="bg-gradient-to-br from-sky-300 via-blue-400 to-blue-600 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
         CommApp
       </span>
     </div>

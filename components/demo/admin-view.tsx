@@ -154,8 +154,8 @@ function LoginScreen({
     <main className="relative flex min-h-svh w-full flex-col items-center justify-center px-6 py-12">
       <AnimatedBackground />
       <div className="relative z-10 mb-6 flex flex-col items-center gap-3">
-        <Logo size={56} />
-        <h1 className="text-2xl font-semibold tracking-tight">CommApp Admin</h1>
+        <Logo size={72} />
+        <h1 className="text-3xl font-bold tracking-tight">CommApp Admin</h1>
         <p className="text-center text-sm text-zinc-500">
           Sign in to see every user that has joined CommApp.
         </p>

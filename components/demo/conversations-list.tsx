@@ -150,9 +150,11 @@ export function ConversationsList({
   return (
     <main className="flex h-full flex-1 flex-col overflow-hidden bg-background">
       <header className="flex items-center gap-2 border-b bg-card px-3 py-3">
-        <Logo size={32} />
+        <Logo size={40} />
         <div className="flex flex-col">
-          <span className="text-sm font-semibold leading-tight">Chats</span>
+          <span className="text-xl font-bold leading-tight tracking-tight">
+            CommApp
+          </span>
           <span className="font-mono text-[10px] text-zinc-500">{self}</span>
         </div>
       </header>
