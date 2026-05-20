@@ -1,17 +1,48 @@
+"use client";
+
+import { useState } from "react";
+
 interface LogoProps {
   size?: number;
   className?: string;
 }
 
 /**
- * App logo: chat bubble with three WiFi-style signal arcs above it, in
- * a cyan → blue → purple gradient. Designed to read on dark backgrounds.
+ * App logo.
  *
- * If you want to use the raw PNG instead, drop it at /public/app-logo.png
- * and replace the inner <svg> with:
- *   <img src="/app-logo.png" alt="CommApp" width={size} height={size} />
+ * Renders /public/app-logo.png if the file is present. If the file is
+ * missing the `onError` handler falls back to a hand-rolled SVG that
+ * approximates the artwork (chat bubble + WiFi-style signal arcs in a
+ * cyan → blue → purple gradient), so the rest of the app still has a
+ * recognisable mark while you're getting the real asset in place.
+ *
+ * To use your exact image, save it at:
+ *
+ *   UCS/public/app-logo.png
+ *
+ * The next page load will pick it up; no code change required.
  */
 export function Logo({ size = 40, className }: LogoProps) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  if (imageFailed) {
+    return <LogoFallback size={size} className={className} />;
+  }
+
+  return (
+    <img
+      src="/app-logo.png"
+      alt="CommApp"
+      width={size}
+      height={size}
+      onError={() => setImageFailed(true)}
+      className={`shrink-0 object-contain ${className ?? ""}`}
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
+function LogoFallback({ size, className }: LogoProps) {
   const gradId = "commapp-logo-grad";
   return (
     <svg
@@ -38,8 +69,6 @@ export function Logo({ size = 40, className }: LogoProps) {
           <stop offset="100%" stopColor="#a855f7" />
         </linearGradient>
       </defs>
-
-      {/* Signal arcs (largest outermost, smallest closest to bubble) */}
       <path
         d="M 22 38 A 28 28 0 0 1 78 38"
         stroke={`url(#${gradId})`}
@@ -61,8 +90,6 @@ export function Logo({ size = 40, className }: LogoProps) {
         fill="none"
         strokeLinecap="round"
       />
-
-      {/* Chat bubble with bottom-left tail */}
       <path
         d="M 30 51
            Q 30 44 37 44
@@ -82,8 +109,10 @@ export function Logo({ size = 40, className }: LogoProps) {
 }
 
 /**
- * Two-tone wordmark — "Comm" in foreground white, "App" in the gradient
- * accent — mirrors the uploaded artwork.
+ * Two-tone wordmark — "Comm" in foreground, "App" in gradient — used in
+ * spots where we want the brand name next to the icon. Most callers now
+ * just render <Logo /> on its own since the uploaded artwork already
+ * contains the wordmark.
  */
 export function Wordmark({ className }: { className?: string }) {
   return (
